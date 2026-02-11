@@ -11,16 +11,16 @@ def dijkstra(G, start):
     dist[start] = 0
     visited = set()
 
-    while len(visited) < len(G.nodes):
+    while(len(visited) < len(G.nodes)):
         current = None
         current_dist = float("inf")
 
         for node in G.nodes:
-            if node not in visited and dist[node] < current_dist:
+            if((node not in visited) and (dist[node] < current_dist)):
                 current = node
                 current_dist = dist[node]
 
-        if current is None:
+        if(current is None):
             break
 
         visited.add(current)
@@ -29,7 +29,7 @@ def dijkstra(G, start):
             edge_data = min(G[current][neighbor].values(), key=lambda d: d.get("length", 1))
             weight = edge_data.get("length", 1)
 
-            if dist[current] + weight < dist[neighbor]:
+            if((dist[current] + weight) < (dist[neighbor])):
                 dist[neighbor] = dist[current] + weight
                 prev[neighbor] = current
 
@@ -39,7 +39,7 @@ def dijkstra(G, start):
 def reconstruir_ruta(prev, start, end):
     path = []
     current = end
-    while current is not None:
+    while(current is not None):
         path.append(current)
         current = prev[current]
     path.reverse()
@@ -58,7 +58,7 @@ def plot_route(G, route):
     edges.plot(ax=ax, linewidth=1, color="lightgray")
     nodes.plot(ax=ax, color="black", markersize=5)
 
-    if len(route) > 1:
+    if(len(route) > 1):
         route_edges = ox.routing.route_to_gdf(G, route)
         route_edges = route_edges.to_crs(epsg=3857)
         route_edges.plot(ax=ax, linewidth=3, color="red")
@@ -75,10 +75,9 @@ def plot_route(G, route):
 
 
 def main():
-    print("Cargando grafo OSM...")
-
-    # Usa solo uno de los dos métodos:
-    # G = ox.graph_from_xml("provi.osm", simplify=True, retain_all=True)
+    print("Cargando grafo de Guadalajara...")
+    
+    # cargar grafo de Guadalajara usando osmnx
     G = ox.graph_from_place("Guadalajara, Mexico", network_type="walk", simplify=True, retain_all=True)
 
     # coordenadas de inicio
