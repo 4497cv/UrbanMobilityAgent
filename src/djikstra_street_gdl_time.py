@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import contextily as ctx
 import networkx as nx
 import heapq
+import os
+import sys
+import workspace
 
 # ----------------------------------
 # DIJKSTRA (USANDO travel_time)
@@ -65,17 +68,48 @@ def plot_route(G, route):
     else:
         nodes.loc[[route[0]]].plot(ax=ax, color="orange", markersize=80, label="Inicio=Destino")
 
+    # save resulting route in shape file
+    route_gdf = ox.routing.route_to_gdf(G, route)
+    route_gdf.to_file("ruta_dijkstra.shp")
+
     ax.legend()
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, zoom=12)
     ax.set_axis_off()
     plt.show()
 
+def reconstruct_graph_from_shp():
+    nodes = gpd.read_file(workspace.get_qgis_gdl_nodes_path())
+    edges = gpd.read_file(workspace.get_qgis_gdl_edges_path())
+
+    G = ox.graph_from_gdfs(nodes, edges)
+    return G
+
+def reconstruct_graph_from_graphml(graphml_path):
+    G = ox.load_graphml(graphml_path)
+    return G
+
+def save_shp_files_from_graph(G):
+    # convertir a GeoDataFrames
+    nodes, edges = ox.graph_to_gdfs(G)
+
+    # guardar shapefiles
+    nodes.to_file(workspace.get_qgis_gdl_nodes_path())
+    edges.to_file(workspace.get_qgis_gdl_edges_path())
+    # guardarlo en formato networkx
+    ox.save_graphml(G, workspace.get_graphml_gdl_path())
 
 def main():
-    print("Cargando grafo OSM...")
 
-    G = ox.graph_from_place("Guadalajara, Mexico", network_type="drive")
-
+    # verify if graph exists
+    if(True == os.path.exists(workspace.get_graphml_gdl_path())):
+        print("Reconstructing path from shape files: %s" % workspace.get_qgis_gdl_shp_path())
+        G = reconstruct_graph_from_graphml(workspace.get_graphml_gdl_path())
+    else:
+        print("Loading graph from Guadalajara using OSMX")
+        G = ox.graph_from_place("Guadalajara, Mexico", network_type="drive")
+        print("Saving shape files")
+        save_shp_files_from_graph(G)
+        
     # -----------------------------
     # Añadir travel_time a las aristas
     # -----------------------------
