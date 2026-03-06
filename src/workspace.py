@@ -2,6 +2,7 @@ import os
 import sys
 
 workspace_path = ""
+route_path = ""
 
 def init_workspace_path():
     global workspace_path
@@ -27,6 +28,15 @@ def get_qgis_gdl_nodes_path(nodes_shp="nodes.shp"):
 
 def get_graphml_gdl_path(graphml="grafo_guadalajara.graphml"):
     return os.path.join(get_qgis_gdl_shp_path(), graphml)
+
+def get_route_gdl_path():
+    return os.path.join(get_workspace_path(), "QGIS", "Graph", "Guadalajara", "Route")
+
+def get_route_djikstra_gdl_path():
+    return os.path.join(get_route_gdl_path(), "Djikstra")
+
+def get_route_a_star_gdl_path():
+    return os.path.join(get_route_gdl_path(), "Djikstra")
 
 
 
