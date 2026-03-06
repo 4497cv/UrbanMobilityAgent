@@ -146,10 +146,12 @@ def plot_route(algorithm_used, G, route):
     # save resulting route in shape file
     route_gdf = ox.routing.route_to_gdf(G, route)
 
-    if("djikstra" == algorithm_used):
+    if("Djikstra" == algorithm_used):
         route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra.shp"))
-    elif("a_star" == algorithm_used):
-        route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star.shp"))
+    elif("A_Star_Manhattan" == algorithm_used):
+        route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_manhattan.shp"))
+    elif("A_Star_Euclidean" == algorithm_used):
+        route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_euclidean.shp"))
 
     ax.legend()
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, zoom=12)
@@ -157,8 +159,6 @@ def plot_route(algorithm_used, G, route):
     plt.show()
 
 def reconstruct_graph_from_shp():
-
-
     nodes = gpd.read_file(workspace.get_qgis_gdl_nodes_path())
     edges = gpd.read_file(workspace.get_qgis_gdl_edges_path())
 
@@ -195,6 +195,18 @@ def set_max_speed_weight(G, speed_kmh = 100):
             
     return G
 
+def set_elevation_weight(G):
+    for u, v, k, data in G.edges(keys=True, data=True):
+        # Get elevations of the start and end nodes
+        elevation_u = G.nodes[u].get('elevation', 0)  # Default to 0 if no elevation
+        elevation_v = G.nodes[v].get('elevation', 0)  # Default to 0 if no elevation
+
+        # Use the difference in elevation as the edge weight
+        elevation_difference = abs(elevation_u - elevation_v)
+        
+        data['weight'] = elevation_difference
+    return G
+
 def main():
     # verify if graph exists
     if(True == os.path.exists(workspace.get_graphml_gdl_path())):
@@ -202,14 +214,15 @@ def main():
         G = reconstruct_graph_from_graphml(workspace.get_graphml_gdl_path())
     else:
         print("Loading graph from Guadalajara using OSMX")
-        G = ox.graph_from_place("Guadalajara, Mexico", network_type="drive")
+        G = ox.graph_from_place("Guadalajara, Mexico", network_type="walk")
         # mapping node elevations to graph
         print("Adding Elevations to Graph of Guadalajara using OSMX")
         ox.add_node_elevations_google(G, api_key='AIzaSyAM3AJEapQcpVRglfgmg7hw8o9VSuS0p8I')  
         print("Saving shape files")
         save_shp_files_from_graph(G)
     
-    set_max_speed_weight(G, 100)
+    #set_max_speed_weight(G, 100)
+    set_elevation_weight(G)
     # coordenadas de inicio
     start_lat, start_lon = 20.679248, -103.377080
     # coordenadas de destino
@@ -232,21 +245,25 @@ def main():
         print("No hay conexión entre inicio y destino")
         return
 
-    algorithm_used = "A_Star_Manhattan"
+    algorithm_used = "A_Star_Euclidean"
 
     if(algorithm_used == "Djikstra"):
         print("Executing Dijkstra ...")
-        dist, prev = dijkstra(G, start_node, weight="travel_time")
+        dist, prev = dijkstra(G, start_node, weight="elevation")
         path = reconstruct_route(prev, start_node, end_node)
     elif(algorithm_used == "A_Star_Manhattan"):
         print("Executing A Star...")
-        dist, prev = a_star(G, start_node, end_node, distance_manhattan, weight="travel_time")
+        dist, prev = a_star(G, start_node, end_node, distance_manhattan, weight="elevation")
+        path = reconstruct_route(prev, start_node, end_node)
+    elif(algorithm_used == "A_Star_Euclidean"):
+        print("Executing A Star...")
+        dist, prev = a_star(G, start_node, end_node, distance_euclidean, weight="elevation")
         path = reconstruct_route(prev, start_node, end_node)
 
     if path:
         print("Tiempo total (segundos):", dist[end_node])
         print("Ruta encontrada con", len(path), "nodos")
-        plot_route("djikstra", G, path)
+        plot_route(algorithm_used, G, path)
     else:
         print("No se encontró ruta")
 
