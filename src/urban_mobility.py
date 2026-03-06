@@ -9,6 +9,8 @@ import sys
 import workspace
 import math 
 
+elevation_flag = False
+
 def distance_manhattan(p1, p2):
     return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
@@ -125,6 +127,7 @@ def reconstruct_route(prev, start, end):
 
 
 def plot_route(algorithm_used, G, route):
+    global elevation_flag
     nodes, edges = ox.graph_to_gdfs(G)
     nodes = nodes.to_crs(epsg=3857)
     edges = edges.to_crs(epsg=3857)
@@ -145,18 +148,29 @@ def plot_route(algorithm_used, G, route):
     
     # save resulting route in shape file
     route_gdf = ox.routing.route_to_gdf(G, route)
-
+    
     if("Djikstra" == algorithm_used):
-        route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra.shp"))
+        if(elevation_flag == True):
+            route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra_Elevation.shp"))
+        else:
+            route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra.shp"))
     elif("A_Star_Manhattan" == algorithm_used):
-        route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_manhattan.shp"))
+        if(elevation_flag == True):
+            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_manhattan_Elevation.shp"))
+        else:
+            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_manhattan.shp"))
     elif("A_Star_Euclidean" == algorithm_used):
-        route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_euclidean.shp"))
+        if(elevation_flag == True):
+            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_euclidean_Elevation.shp"))
+        else:
+            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_euclidean.shp"))
 
-    ax.legend()
-    ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, zoom=12)
-    ax.set_axis_off()
-    plt.show()
+    local_plot = False
+    if(local_plot == True):
+        ax.legend()
+        ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, zoom=12)
+        ax.set_axis_off()
+        plt.show()
 
 def reconstruct_graph_from_shp():
     nodes = gpd.read_file(workspace.get_qgis_gdl_nodes_path())
@@ -196,6 +210,8 @@ def set_max_speed_weight(G, speed_kmh = 100):
     return G
 
 def set_elevation_weight(G):
+    global elevation_flag
+    elevation_flag = True
     for u, v, k, data in G.edges(keys=True, data=True):
         # Get elevations of the start and end nodes
         elevation_u = G.nodes[u].get('elevation', 0)  # Default to 0 if no elevation
@@ -245,8 +261,7 @@ def main():
         print("No hay conexión entre inicio y destino")
         return
 
-    algorithm_used = "A_Star_Euclidean"
-
+    algorithm_used = "A_Star_Manhattan"
     if(algorithm_used == "Djikstra"):
         print("Executing Dijkstra ...")
         dist, prev = dijkstra(G, start_node, weight="elevation")
