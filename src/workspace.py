@@ -33,11 +33,14 @@ def get_route_gdl_path():
     return os.path.join(get_workspace_path(), "QGIS", "Graph", "Guadalajara", "Route")
 
 def get_route_djikstra_gdl_path():
-    return os.path.join(get_route_gdl_path(), "Djikstra")
+    path = os.path.join(get_route_gdl_path(), "Djikstra")
+    os.makedirs(path, exist_ok=True)
+    return path
 
 def get_route_a_star_gdl_path():
-    return os.path.join(get_route_gdl_path(), "Djikstra")
-
+    path = os.path.join(get_route_gdl_path(), "A_Star")
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
 init_workspace_path()
