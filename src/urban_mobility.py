@@ -8,12 +8,12 @@ import os
 import sys
 import workspace
 import math 
+import time
 
 elevation_flag = False
 
 def distance_manhattan(p1, p2):
     return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
-
 
 def distance_euclidean(p1, p2):
     """
@@ -239,48 +239,50 @@ def main():
     
     #set_max_speed_weight(G, 100)
     set_elevation_weight(G)
-    # coordenadas de inicio
-    start_lat, start_lon = 20.679248, -103.377080
-    # coordenadas de destino
+    # start coordinates
+    
+    #start_lat, start_lon = 20.679248, -103.377080
+    start_lon, start_lat = -103.376624,20.630163
+    # destination coordinates
     end_lat, end_lon = 20.697814, -103.384384
 
     start_node = ox.distance.nearest_nodes(G, start_lon, start_lat)
     end_node = ox.distance.nearest_nodes(G, end_lon, end_lat)
 
-    print("Número de nodos:", len(G.nodes))
-    print("Número de aristas:", len(G.edges))
+    print("Number of nodes:", len(G.nodes))
+    print("Number de edges:", len(G.edges))
 
-    print("Nodo inicio:", start_node)
-    print("Nodo destino:", end_node)
+    print("Start Node:", start_node)
+    print("Destination Node:", end_node)
 
     if start_node == end_node:
-        print("Inicio y destino son el mismo nodo, cambia coordenadas.")
+        print("Start and destination node have the same coordinates or are to close to each other.")
         return
 
     if not nx.has_path(G, start_node, end_node):
-        print("No hay conexión entre inicio y destino")
+        print("There is no conection between the start and end node")
         return
 
-    algorithm_used = "A_Star_Manhattan"
+    algorithm_used = "Djikstra"
     if(algorithm_used == "Djikstra"):
         print("Executing Dijkstra ...")
         dist, prev = dijkstra(G, start_node, weight="elevation")
         path = reconstruct_route(prev, start_node, end_node)
     elif(algorithm_used == "A_Star_Manhattan"):
-        print("Executing A Star...")
+        print("Executing A Star Manhattan...")
         dist, prev = a_star(G, start_node, end_node, distance_manhattan, weight="elevation")
         path = reconstruct_route(prev, start_node, end_node)
     elif(algorithm_used == "A_Star_Euclidean"):
-        print("Executing A Star...")
+        print("Executing A Star Euclidean...")
         dist, prev = a_star(G, start_node, end_node, distance_euclidean, weight="elevation")
         path = reconstruct_route(prev, start_node, end_node)
 
     if path:
-        print("Tiempo total (segundos):", dist[end_node])
-        print("Ruta encontrada con", len(path), "nodos")
+        print("Total time (sec):", dist[end_node])
+        print("Route found with", len(path), "nodos")
         plot_route(algorithm_used, G, path)
     else:
-        print("No se encontró ruta")
+        print("Route not found")
 
 
 if __name__ == "__main__":
