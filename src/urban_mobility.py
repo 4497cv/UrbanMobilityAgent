@@ -110,7 +110,7 @@ def a_star(G, start, end, heuristic, weight_d):
             else:
                 weight = 1
 
-            g = distance[current] + weight  # Actual cost from start to neighbor
+            g = float(distance[current]) + float(weight)  # Actual cost from start to neighbor
             neighbor_coords = (G.nodes[neighbor]['x'], G.nodes[neighbor]['y'])
             h = heuristic(neighbor_coords, end_coords)  # Heuristic from neighbor to goal
             f = g + h  # Total estimated cost
