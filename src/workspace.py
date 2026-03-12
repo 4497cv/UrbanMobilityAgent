@@ -3,6 +3,7 @@ import sys
 
 workspace_path = ""
 route_path = ""
+elevation_flag = False
 
 def init_workspace_path():
     global workspace_path
@@ -42,5 +43,15 @@ def get_route_a_star_gdl_path():
     os.makedirs(path, exist_ok=True)
     return path
 
+def gg_key():
+    return 'AIzaSyAM3AJEapQcpVRglfgmg7hw8o9VSuS0p8I'
+
+def set_elevation_flag(value):
+    global elevation_flag
+    elevation_flag = value
+
+def get_elevation_flag():
+    global elevation_flag
+    return elevation_flag
 
 init_workspace_path()
