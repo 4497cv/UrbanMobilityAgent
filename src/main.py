@@ -9,7 +9,7 @@ import workspace
 
 
 def __main__(algorithm_used, elevation):
-
+    
     print("\nExecuting Algorithm for %s" %algorithm_used)
     # verify if graph existss
     if(True == os.path.exists(workspace.get_graphml_gdl_path())):
@@ -76,11 +76,11 @@ def __main__(algorithm_used, elevation):
 
 
 if __name__ == "__main__":
-    #__main__("Djikstra", True)
-    #__main__("A_Star_Manhattan", True)
+    __main__("Djikstra", True)
+    __main__("A_Star_Manhattan", True)
     __main__("A_Star_Euclidean", True)
 
-    #__main__("Djikstra", False)
-    #__main__("A_Star_Manhattan", False)
+    __main__("Djikstra", False)
+    __main__("A_Star_Manhattan", False)
     __main__("A_Star_Euclidean", False)
   

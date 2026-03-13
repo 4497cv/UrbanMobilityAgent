@@ -59,8 +59,6 @@ def get_a_star_euclidean_ele_shp():
     path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_euclidean_Elevation.shp")
     return path
 
-def gg_key():
-    return 'AIzaSyAM3AJEapQcpVRglfgmg7hw8o9VSuS0p8I'
 
 def set_elevation_flag(value):
     global elevation_flag
