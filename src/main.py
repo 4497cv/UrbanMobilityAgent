@@ -9,16 +9,12 @@ import workspace
 
 
 def __main__(algorithm_used, elevation):
+
     print("\nExecuting Algorithm for %s" %algorithm_used)
     # verify if graph existss
     if(True == os.path.exists(workspace.get_graphml_gdl_path())):
         print("Reconstructing path from shape files: %s" % workspace.get_qgis_gdl_shp_path())
         G = reconstruct_graph_from_graphml(workspace.get_graphml_gdl_path())
-        
-        if(elevation == True):
-            workspace.set_elevation_flag(True)
-            set_elevation_weight(G)
-
     else:
         print("Loading graph from Guadalajara using OSMX")
         G = ox.graph_from_place("Guadalajara, Mexico", network_type="walk")
@@ -27,6 +23,13 @@ def __main__(algorithm_used, elevation):
         ox.add_node_elevations_google(G, api_key=workspace.gg_key())  
         print("Saving shape files")
         save_shp_files_from_graph(G)
+    
+    if(elevation == True):
+        set_elevation_weight(G)
+        workspace.set_elevation_flag(True)
+    else:
+        workspace.set_elevation_flag(False)
+
     
     #set_max_speed_weight(G, 80)
     

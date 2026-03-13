@@ -43,6 +43,22 @@ def get_route_a_star_gdl_path():
     os.makedirs(path, exist_ok=True)
     return path
 
+def get_a_star_manhattan_shp():
+    path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_manhattan.shp")
+    return path
+
+def get_a_star_manhattan_ele_shp():
+    path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_manhattan_Elevation.shp")
+    return path
+
+def get_a_star_euclidean_shp():
+    path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_euclidean.shp")
+    return path
+
+def get_a_star_euclidean_ele_shp():
+    path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_euclidean_Elevation.shp")
+    return path
+
 def gg_key():
     return 'AIzaSyAM3AJEapQcpVRglfgmg7hw8o9VSuS0p8I'
 

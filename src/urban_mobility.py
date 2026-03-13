@@ -9,9 +9,28 @@ import sys
 import workspace
 import math 
 import time
+import numpy as np
+
+def toblers_hiking_function(slope):
+    return 6 * np.exp(-3.5 * abs(slope + 0.05))
+
+def calculate_slope(elevation_x1, elevation_x2, distance):
+    return (elevation_x2 - elevation_x1) / distance    
 
 def distance_manhattan(p1, p2):
     return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
+
+def calculate_toblers_time(elevation_x1, elevation_x2, distance):
+    slope = calculate_slope(elevation_x1, elevation_x2, distance)
+
+    speed_kmh = toblers_hiking_function(slope)
+
+    speed_ms = speed_kmh * 1000 / 3600
+
+    if speed_ms == 0:
+        return float("inf")
+
+    return distance / speed_ms
 
 def distance_euclidean(p1, p2):
     """
@@ -80,8 +99,6 @@ def a_star(G, start, end, heuristic, weight_d):
     # Set to track visited nodes
     visited = set()
 
-    print("Elevation Flag %s" % workspace.get_elevation_flag())
-
     while pq:
         # Get the node with the lowest f value
         _, current = heapq.heappop(pq)
@@ -108,7 +125,7 @@ def a_star(G, start, end, heuristic, weight_d):
                     print(weight)
                     sys.exit()
             else:
-                weight = 1
+                weight = 0
 
             g = float(distance[current]) + float(weight)  # Actual cost from start to neighbor
             neighbor_coords = (G.nodes[neighbor]['x'], G.nodes[neighbor]['y'])
@@ -137,7 +154,7 @@ def reconstruct_route(prev, start, end):
     return []
 
 
-def plot_route(algorithm_used, G, route):
+def plot_route(algorithm_used, G, route, local_plot = False):
     nodes, edges = ox.graph_to_gdfs(G)
     nodes = nodes.to_crs(epsg=3857)
     edges = edges.to_crs(epsg=3857)
@@ -166,16 +183,18 @@ def plot_route(algorithm_used, G, route):
             route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra.shp"))
     elif("A_Star_Manhattan" == algorithm_used):
         if(workspace.get_elevation_flag() == True):
-            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_manhattan_Elevation.shp"))
+            route_gdf.to_file(workspace.get_a_star_manhattan_ele_shp())
         else:
-            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_manhattan.shp"))
+            route_gdf.to_file(workspace.get_a_star_manhattan_shp())
     elif("A_Star_Euclidean" == algorithm_used):
         if(workspace.get_elevation_flag() == True):
-            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_euclidean_Elevation.shp"))
+            route_gdf.to_file(workspace.get_a_star_euclidean_ele_shp())
         else:
-            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_euclidean.shp"))
+            route_gdf.to_file(workspace.get_a_star_euclidean_shp())
+    else:
+        print("Algorithm not found %s" % algorithm_used)
+        sys.exit()
 
-    local_plot = False
     if(local_plot == True):
         ax.legend()
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, zoom=12)
@@ -222,6 +241,7 @@ def set_max_speed_weight(G, speed_kmh = 60):
 def set_elevation_weight(G):
 
     workspace.set_elevation_flag(True)
+    print("> Elevation is activated")
 
     for u, v, k, data in G.edges(keys=True, data=True):
         # Get elevations of the start and end nodes
@@ -231,6 +251,6 @@ def set_elevation_weight(G):
         # Use the difference in elevation as the edge weight
         elevation_difference = abs(elevation_u - elevation_v)
         
-        data['ele_diff'] = elevation_difference
+        data['ele_diff'] = calculate_toblers_time(elevation_u, elevation_v, data["length"])
 
     ox.save_graphml(G, workspace.get_graphml_gdl_path())
