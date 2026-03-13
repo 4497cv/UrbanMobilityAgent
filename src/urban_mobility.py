@@ -8,12 +8,29 @@ import os
 import sys
 import workspace
 import math 
+import time
+import numpy as np
 
-elevation_flag = False
+def toblers_hiking_function(slope):
+    return 6 * np.exp(-3.5 * abs(slope + 0.05))
+
+def calculate_slope(elevation_x1, elevation_x2, distance):
+    return (elevation_x2 - elevation_x1) / distance    
 
 def distance_manhattan(p1, p2):
     return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
+def calculate_toblers_time(elevation_x1, elevation_x2, distance):
+    slope = calculate_slope(elevation_x1, elevation_x2, distance)
+
+    speed_kmh = toblers_hiking_function(slope)
+
+    speed_ms = speed_kmh * 1000 / 3600
+
+    if speed_ms == 0:
+        return float("inf")
+
+    return distance / speed_ms
 
 def distance_euclidean(p1, p2):
     """
@@ -45,7 +62,7 @@ def dijkstra(G, start, weight="length"):
 
     return dist, prev
 
-def a_star(G, start, end, heuristic, weight):
+def a_star(G, start, end, heuristic, weight_d):
     """
     A* algorithm to find the shortest path from start to goal using a NetworkX graph.
     
@@ -96,10 +113,21 @@ def a_star(G, start, end, heuristic, weight):
         
         # Check each neighbor
         for neighbor in G.neighbors(current):
-            edge_data = G.get_edge_data(current, neighbor)
-            weight = edge_data.get('weight', 1)  # Default to 1 if no weight is specified
-            
-            g = distance[current] + weight  # Actual cost from start to neighbor
+            edge_dt = G.get_edge_data(current, neighbor)
+            edge_data = edge_dt.get(0, {})
+
+            if(True == workspace.get_elevation_flag()):
+                weight = edge_data.get('ele_diff', 1)
+
+                # Check if 'ele_diff' is missing
+                if 'ele_diff' not in edge_data:
+                    print(f"Missing 'ele_diff' in edge between {current} and {neighbor}: {edge_dt}")            #weight = edge.get('ele_diff', 1)  # Default to 1 if no weight is specified
+                    print(weight)
+                    sys.exit()
+            else:
+                weight = 0
+
+            g = float(distance[current]) + float(weight)  # Actual cost from start to neighbor
             neighbor_coords = (G.nodes[neighbor]['x'], G.nodes[neighbor]['y'])
             h = heuristic(neighbor_coords, end_coords)  # Heuristic from neighbor to goal
             f = g + h  # Total estimated cost
@@ -126,8 +154,7 @@ def reconstruct_route(prev, start, end):
     return []
 
 
-def plot_route(algorithm_used, G, route):
-    global elevation_flag
+def plot_route(algorithm_used, G, route, local_plot = False):
     nodes, edges = ox.graph_to_gdfs(G)
     nodes = nodes.to_crs(epsg=3857)
     edges = edges.to_crs(epsg=3857)
@@ -150,22 +177,24 @@ def plot_route(algorithm_used, G, route):
     route_gdf = ox.routing.route_to_gdf(G, route)
     
     if("Djikstra" == algorithm_used):
-        if(elevation_flag == True):
+        if(workspace.get_elevation_flag() == True):
             route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra_Elevation.shp"))
         else:
             route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra.shp"))
     elif("A_Star_Manhattan" == algorithm_used):
-        if(elevation_flag == True):
-            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_manhattan_Elevation.shp"))
+        if(workspace.get_elevation_flag() == True):
+            route_gdf.to_file(workspace.get_a_star_manhattan_ele_shp())
         else:
-            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_manhattan.shp"))
+            route_gdf.to_file(workspace.get_a_star_manhattan_shp())
     elif("A_Star_Euclidean" == algorithm_used):
-        if(elevation_flag == True):
-            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_euclidean_Elevation.shp"))
+        if(workspace.get_elevation_flag() == True):
+            route_gdf.to_file(workspace.get_a_star_euclidean_ele_shp())
         else:
-            route_gdf.to_file(os.path.join(workspace.get_route_a_star_gdl_path(), "ruta_a_star_euclidean.shp"))
+            route_gdf.to_file(workspace.get_a_star_euclidean_shp())
+    else:
+        print("Algorithm not found %s" % algorithm_used)
+        sys.exit()
 
-    local_plot = False
     if(local_plot == True):
         ax.legend()
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, zoom=12)
@@ -195,7 +224,7 @@ def save_shp_files_from_graph(G):
     # guardarlo en formato networkx
     ox.save_graphml(G, workspace.get_graphml_gdl_path())
 
-def set_max_speed_weight(G, speed_kmh = 100):
+def set_max_speed_weight(G, speed_kmh = 60):
     for u, v, k, data in G.edges(keys=True, data=True):
         if "length" in data:
             speed_kmh = 50  # valor por defecto
@@ -205,13 +234,15 @@ def set_max_speed_weight(G, speed_kmh = 100):
                 except:
                     pass
             speed_ms = speed_kmh * 1000 / 3600
-            data["travel_time"] = data["length"] / speed_ms
+            data["trv_time"] = data["length"] / speed_ms
             
     return G
 
 def set_elevation_weight(G):
-    global elevation_flag
-    elevation_flag = True
+
+    workspace.set_elevation_flag(True)
+    print("> Elevation is activated")
+
     for u, v, k, data in G.edges(keys=True, data=True):
         # Get elevations of the start and end nodes
         elevation_u = G.nodes[u].get('elevation', 0)  # Default to 0 if no elevation
@@ -220,68 +251,6 @@ def set_elevation_weight(G):
         # Use the difference in elevation as the edge weight
         elevation_difference = abs(elevation_u - elevation_v)
         
-        data['weight'] = elevation_difference
-    return G
+        data['ele_diff'] = calculate_toblers_time(elevation_u, elevation_v, data["length"])
 
-def main():
-    # verify if graph exists
-    if(True == os.path.exists(workspace.get_graphml_gdl_path())):
-        print("Reconstructing path from shape files: %s" % workspace.get_qgis_gdl_shp_path())
-        G = reconstruct_graph_from_graphml(workspace.get_graphml_gdl_path())
-    else:
-        print("Loading graph from Guadalajara using OSMX")
-        G = ox.graph_from_place("Guadalajara, Mexico", network_type="walk")
-        # mapping node elevations to graph
-        print("Adding Elevations to Graph of Guadalajara using OSMX")
-        ox.add_node_elevations_google(G, api_key='AIzaSyAM3AJEapQcpVRglfgmg7hw8o9VSuS0p8I')  
-        print("Saving shape files")
-        save_shp_files_from_graph(G)
-    
-    #set_max_speed_weight(G, 100)
-    set_elevation_weight(G)
-    # coordenadas de inicio
-    start_lat, start_lon = 20.679248, -103.377080
-    # coordenadas de destino
-    end_lat, end_lon = 20.697814, -103.384384
-
-    start_node = ox.distance.nearest_nodes(G, start_lon, start_lat)
-    end_node = ox.distance.nearest_nodes(G, end_lon, end_lat)
-
-    print("Número de nodos:", len(G.nodes))
-    print("Número de aristas:", len(G.edges))
-
-    print("Nodo inicio:", start_node)
-    print("Nodo destino:", end_node)
-
-    if start_node == end_node:
-        print("Inicio y destino son el mismo nodo, cambia coordenadas.")
-        return
-
-    if not nx.has_path(G, start_node, end_node):
-        print("No hay conexión entre inicio y destino")
-        return
-
-    algorithm_used = "A_Star_Manhattan"
-    if(algorithm_used == "Djikstra"):
-        print("Executing Dijkstra ...")
-        dist, prev = dijkstra(G, start_node, weight="elevation")
-        path = reconstruct_route(prev, start_node, end_node)
-    elif(algorithm_used == "A_Star_Manhattan"):
-        print("Executing A Star...")
-        dist, prev = a_star(G, start_node, end_node, distance_manhattan, weight="elevation")
-        path = reconstruct_route(prev, start_node, end_node)
-    elif(algorithm_used == "A_Star_Euclidean"):
-        print("Executing A Star...")
-        dist, prev = a_star(G, start_node, end_node, distance_euclidean, weight="elevation")
-        path = reconstruct_route(prev, start_node, end_node)
-
-    if path:
-        print("Tiempo total (segundos):", dist[end_node])
-        print("Ruta encontrada con", len(path), "nodos")
-        plot_route(algorithm_used, G, path)
-    else:
-        print("No se encontró ruta")
-
-
-if __name__ == "__main__":
-    main()
+    ox.save_graphml(G, workspace.get_graphml_gdl_path())
