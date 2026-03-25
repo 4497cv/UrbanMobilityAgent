@@ -6,18 +6,21 @@ import contextily as ctx
 import networkx as nx
 import os
 import workspace
-
+import profiles
 
 def __main__(algorithm_used, elevation):
 
     print("\nExecuting Algorithm for %s" %algorithm_used)
+
+    user = profiles.UserProfile("network_type")
+
     # verify if graph existss
     if(True == os.path.exists(workspace.get_graphml_gdl_path())):
         print("Reconstructing path from shape files: %s" % workspace.get_qgis_gdl_shp_path())
         G = reconstruct_graph_from_graphml(workspace.get_graphml_gdl_path())
     else:
         print("Loading graph from Guadalajara using OSMX")
-        G = ox.graph_from_place("Guadalajara, Mexico", network_type="walk")
+        G = ox.graph_from_place("Guadalajara, Mexico", network_type=user.get_network_type())
         # mapping node elevations to graph
         print("Adding Elevations to Graph of Guadalajara using OSMX")
         ox.add_node_elevations_google(G, api_key=workspace.gg_key())  

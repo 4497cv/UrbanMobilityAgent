@@ -11,30 +11,86 @@ import math
 import time
 import numpy as np
 
-def toblers_hiking_function(slope):
-    return 6 * np.exp(-3.5 * abs(slope + 0.05))
+def toblers_hiking_function(slope) -> float:
+    """
+        Tobler's hiking function is an exponential function determining the hiking speed, taking into account the slope angle.
 
-def calculate_slope(elevation_x1, elevation_x2, distance):
+        Parameters:
+        - slope (float): it corresponds to the absolute value of the difference in elevation of two different points.
+
+        Returns:
+        - walking velocity [km/h] (float): it is the walking velocity of a hiker, considering the slope into account.
+    """
+    walking_velocity = 6 * np.exp(-3.5 * abs(slope + 0.05))
+
+    return walking_velocity
+
+def calculate_slope(elevation_x1:float, elevation_x2:float, distance:float) -> float:
+    """
+        Function to calculate the slope between two different elevation points
+
+        Parameters:
+        - elevation_x1 (float): elevation value of the first node.
+        - elevation_x2 (float): elevation value of the second node.
+        - distance [km](float): total distance between the two different points
+
+        Returns:
+        - slope: angle of inclination to the horizontal
+    """
     return (elevation_x2 - elevation_x1) / distance    
 
 def distance_manhattan(p1, p2):
+    """
+        Function to calculate the manhattan distance between two different points. 
+        The Manhattan distance is a way to measure distance between two points in a grid by only moving horizontally and vertically.
+
+        Parameters:
+        - p1 (float): elevation value of the first node.
+        - p2 (float): elevation value of the second node.
+
+        Returns:
+        - distance (float): manhattan distance between two points (grid movement)
+    """
     return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
 def calculate_toblers_time(elevation_x1, elevation_x2, distance):
+    """
+        Tobler's hiking function is an exponential function determining the hiking speed, taking into account the slope angle.
+    
+        Parameters:
+        - elevation_x1 [km](float): elevation value of the first node.
+        - elevation_x2 [km](float): elevation value of the second node.
+        - distance [m](float): total distance between the two different points
+
+        Returns:
+        - tobblers_time [m/s]: angle of inclination to the horizontal
+    """
+    tobblers_time = 0
+    # calculate the slope between the two elevation points
     slope = calculate_slope(elevation_x1, elevation_x2, distance)
-
+    # calculate the total walking speed
     speed_kmh = toblers_hiking_function(slope)
-
+    # convert the speed to ms
     speed_ms = speed_kmh * 1000 / 3600
 
     if speed_ms == 0:
-        return float("inf")
+        tobblers_time = float("inf")
+    else:
+        tobblers_time = distance / speed_ms
 
-    return distance / speed_ms
+    return tobblers_time
 
 def distance_euclidean(p1, p2):
     """
-    Calculates the Euclidean distance (straight-line distance) between two points.
+        Function to calculate the euclidean distance between two different points. 
+        The Euclidean distance is the straight-line distance between two points in space.
+        
+        Parameters:
+        - p1 (float): elevation value of the first node.
+        - p2 (float): elevation value of the second node.
+
+        Returns:
+        - distance (float): manhattan distance between two points (grid movement)
     """
     return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
@@ -142,19 +198,49 @@ def a_star(G, start, end, heuristic, weight_d):
     return distance, prev
 
 def reconstruct_route(prev, start, end):
+    """
+    This function reconstructs the route with the solution, with a graph given
+
+    Parameters:
+    - prev:
+    - start:
+    - end:
+    
+    Returns:
+    - path: list of nodes that correspond that connect the start node to the end node
+    """
     path = []
+    # start in the end node
     current = end
-    while current is not None:
+    while(current is not None):
+        # we insert the current node from finish to start
         path.append(current)
+        # we get the reference to the previous node
         current = prev[current]
     path.reverse()
 
-    if path and path[0] == start:
+    if(len(path) > 0) and (path[0] == start):
         return path
+    
     return []
 
 
 def plot_route(algorithm_used, G, route, local_plot = False):
+    """
+    This function loads the graph from a given networkx graph, 
+    saves the nodes and edges information from the graph; when
+    local_plot is activated the graph can be shown locally.
+
+    Parameters:
+    - algorithm_used (str): string that indicates the algorithm that is executed.
+    - G (networkx graph): network X graph.
+    - route (list of networkx nodes): list of nodes containing the path from the start to end.
+    - local_plot (bool): flag to indicate if the graph will be plotted locally.s
+    
+    Returns:
+    - None
+    """
+    # load nodes and edges from the network x graph G
     nodes, edges = ox.graph_to_gdfs(G)
     nodes = nodes.to_crs(epsg=3857)
     edges = edges.to_crs(epsg=3857)
@@ -202,6 +288,23 @@ def plot_route(algorithm_used, G, route, local_plot = False):
         plt.show()
 
 def reconstruct_graph_from_shp():
+    """
+    This function loads the nodes and edges from the .shp files
+    and reconstructs a graph based in these files. This newly
+    created graph does not include the nodes information since,
+    the shp file only contains the information about the trace.
+    If this method is used it would be necesssary to remap, all
+    the attributes again to the new networkx graph.
+
+    Parameters:
+    - algorithm_used (str): string that indicates the algorithm that is executed.
+    - G (networkx graph): network X graph.
+    - route (list of networkx nodes): list of nodes containing the path from the start to end.
+    - local_plot (bool): flag to indicate if the graph will be plotted locally.s
+    
+    Returns:
+    - G (networkx graph): networkx graph 
+    """
     nodes = gpd.read_file(workspace.get_qgis_gdl_nodes_path())
     edges = gpd.read_file(workspace.get_qgis_gdl_edges_path())
 
@@ -209,10 +312,30 @@ def reconstruct_graph_from_shp():
     return G
 
 def reconstruct_graph_from_graphml(graphml_path):
+    """
+    This function reconstructs a networkx graph based in a graphml file.
+    The graphml format retains all the nodes attributes that were present 
+    when the graph had been stored.
+
+    Parameters:
+    - graphml_path (str): path pointing to the location of the graphml file.
+    Returns:
+    - G (networkx graph): network X graph.
+    """
     G = ox.load_graphml(graphml_path)
+
     return G
 
 def save_shp_files_from_graph(G):
+    """
+    This function generates the shp files of a given networkx graph and
+    stores the graph information in a graphml format.
+
+    Parameters:
+    - G (networkx graph): network X graph.
+    Returns:
+    - None
+    """
     # convertir a GeoDataFrames
     nodes, edges = ox.graph_to_gdfs(G)
 
@@ -238,19 +361,20 @@ def set_max_speed_weight(G, speed_kmh = 60):
             
     return G
 
-def set_elevation_weight(G):
+def set_elevation_weight(G, network_type):
 
-    workspace.set_elevation_flag(True)
-    print("> Elevation is activated")
+    if(network_type == "walk"):
+        workspace.set_elevation_flag(True)
+        print("> Elevation is activated")
 
-    for u, v, k, data in G.edges(keys=True, data=True):
-        # Get elevations of the start and end nodes
-        elevation_u = G.nodes[u].get('elevation', 0)  # Default to 0 if no elevation
-        elevation_v = G.nodes[v].get('elevation', 0)  # Default to 0 if no elevation
+        for u, v, k, data in G.edges(keys=True, data=True):
+            # Get elevations of the start and end nodes
+            elevation_u = G.nodes[u].get('elevation', 0)  # Default to 0 if no elevation
+            elevation_v = G.nodes[v].get('elevation', 0)  # Default to 0 if no elevation
 
-        # Use the difference in elevation as the edge weight
-        elevation_difference = abs(elevation_u - elevation_v)
-        
-        data['ele_diff'] = calculate_toblers_time(elevation_u, elevation_v, data["length"])
+            # Use the difference in elevation as the edge weight
+            elevation_difference = abs(elevation_u - elevation_v)
+            
+            data['ele_diff'] = calculate_toblers_time(elevation_u, elevation_v, data["length"])
 
-    ox.save_graphml(G, workspace.get_graphml_gdl_path())
+        ox.save_graphml(G, workspace.get_graphml_gdl_path())

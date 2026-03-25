@@ -60,6 +60,7 @@ def get_a_star_euclidean_ele_shp():
     return path
 
 def gg_key():
+    # todo: use encryption to hide key and store it cfg file
     return 'AIzaSyAM3AJEapQcpVRglfgmg7hw8o9VSuS0p8I'
 
 def set_elevation_flag(value):
