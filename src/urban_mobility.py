@@ -361,7 +361,7 @@ def set_max_speed_weight(G, speed_kmh = 60):
             
     return G
 
-def set_elevation_weight(G, network_type):
+def set_elevation_weight(G, network_type="walk"):
 
     if(network_type == "walk"):
         workspace.set_elevation_flag(True)

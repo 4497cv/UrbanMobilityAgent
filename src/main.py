@@ -20,7 +20,7 @@ def __main__(algorithm_used, elevation):
         G = reconstruct_graph_from_graphml(workspace.get_graphml_gdl_path())
     else:
         print("Loading graph from Guadalajara using OSMX")
-        G = ox.graph_from_place("Guadalajara, Mexico", network_type=user.get_network_type())
+        G = ox.graph_from_place("Guadalajara, Mexico", network_type="walk")
         # mapping node elevations to graph
         print("Adding Elevations to Graph of Guadalajara using OSMX")
         ox.add_node_elevations_google(G, api_key=workspace.gg_key())  
@@ -80,10 +80,10 @@ def __main__(algorithm_used, elevation):
 
 if __name__ == "__main__":
     #__main__("Djikstra", True)
-    #__main__("A_Star_Manhattan", True)
-    __main__("A_Star_Euclidean", True)
+    __main__("A_Star_Manhattan", True)
+    #__main__("A_Star_Euclidean", True)
 
     #__main__("Djikstra", False)
-    #__main__("A_Star_Manhattan", False)
-    __main__("A_Star_Euclidean", False)
+    __main__("A_Star_Manhattan", False)
+    #__main__("A_Star_Euclidean", False)
   
