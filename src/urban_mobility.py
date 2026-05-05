@@ -10,6 +10,8 @@ import workspace
 import math 
 import time
 import numpy as np
+import pandas as pd
+import sys
 
 def toblers_hiking_function(slope) -> float:
     """
@@ -93,6 +95,62 @@ def distance_euclidean(p1, p2):
         - distance (float): manhattan distance between two points (grid movement)
     """
     return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
+def weighted_astar(G, start, end, w_time, w_elev, w_veg=0.0):
+    dist = {node: float('inf') for node in G.nodes}
+    prev = {node: None for node in G.nodes}
+    dist[start] = 0.0
+    pq = [(0.0, start)]
+    visited = set()
+
+    end_x = G.nodes[end]['x']
+    end_y = G.nodes[end]['y']
+
+    while pq:
+        _, current = heapq.heappop(pq)
+        if current in visited:
+            continue
+        visited.add(current)
+        if current == end:
+            break
+
+        for neighbor in G.neighbors(current):
+            if neighbor in visited:
+                continue
+            edge_data = G.get_edge_data(current, neighbor)
+            if edge_data is None:
+                continue
+            data = edge_data.get(0, {})
+
+            length  = float(data.get('length', 1.0))
+            elev_u  = float(G.nodes[current].get('elevation', 0.0))
+            elev_v  = float(G.nodes[neighbor].get('elevation', 0.0))
+            iv      = float(data.get('indice_veg', 0.0))
+
+            t         = calculate_toblers_time(elev_u, elev_v, length)
+            gain      = max(0.0, elev_v - elev_u)
+            edge_cost = w_time * t + w_elev * gain + w_veg * (1.0 - iv)
+
+            g = dist[current] + edge_cost
+            if g < dist[neighbor]:
+                dist[neighbor] = g
+                prev[neighbor] = current
+                dx = G.nodes[neighbor]['x'] - end_x
+                dy = G.nodes[neighbor]['y'] - end_y
+                h  = np.sqrt(dx ** 2 + dy ** 2) * w_time * 0.1
+                heapq.heappush(pq, (g + h, neighbor))
+
+    path = []
+    cur  = end
+    while cur is not None:
+        path.append(cur)
+        cur = prev[cur]
+    path.reverse()
+
+    if path and path[0] == start:
+        return path
+    return None
+
 
 def dijkstra(G, start, weight="length"):
     dist = {node: float("inf") for node in G.nodes}
@@ -225,7 +283,18 @@ def reconstruct_route(prev, start, end):
     return []
 
 
-def plot_route(algorithm_used, G, route, local_plot = False):
+def path_to_prev(path):
+    """
+    Converts a path (list of node IDs) to a prev dict compatible with
+    reconstruct_route(prev, start, end).
+    """
+    prev = {path[0]: None}
+    for i in range(1, len(path)):
+        prev[path[i]] = path[i - 1]
+    return prev
+
+
+def plot_route(algorithm_used, G, route, local_plot=False, solution_index=0):
     """
     This function loads the graph from a given networkx graph, 
     saves the nodes and edges information from the graph; when
@@ -277,6 +346,10 @@ def plot_route(algorithm_used, G, route, local_plot = False):
             route_gdf.to_file(workspace.get_a_star_euclidean_ele_shp())
         else:
             route_gdf.to_file(workspace.get_a_star_euclidean_shp())
+    elif("NSGA2" == algorithm_used):
+        route_gdf.to_file(workspace.get_nsga2_shp(solution_index))
+    elif("NSGA3" == algorithm_used):
+        route_gdf.to_file(workspace.get_nsga3_shp(solution_index))
     else:
         print("Algorithm not found %s" % algorithm_used)
         sys.exit()
@@ -378,3 +451,25 @@ def set_elevation_weight(G, network_type="walk"):
             data['ele_diff'] = calculate_toblers_time(elevation_u, elevation_v, data["length"])
 
         ox.save_graphml(G, workspace.get_graphml_gdl_path())
+
+
+def add_insecurity_to_nodes(G, radius_deg=0.003):
+    from scipy.spatial import cKDTree
+
+    csv_path = os.path.join(workspace.get_insecurity_path(), "2020-2026.csv")
+    df = pd.read_csv(csv_path)
+
+    df = df[df["zona_geografica"].str.strip().str.upper() == "AMG"]
+    df = df.dropna(subset=["x", "y"])
+
+    tree = cKDTree(np.column_stack([df["x"].values, df["y"].values]))
+
+    counts = {}
+    for node_id, data in G.nodes(data=True):
+        counts[node_id] = len(tree.query_ball_point([data["x"], data["y"]], radius_deg))
+
+    max_count = max(counts.values()) or 1
+    for node_id, count in counts.items():
+        G.nodes[node_id]["insecurity"] = count / max_count
+
+    return G
