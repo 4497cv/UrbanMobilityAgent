@@ -34,9 +34,14 @@ def weighted_astar(G, start, end, w_time, w_elev, w_veg=0.0):
             elev_v  = float(G.nodes[neighbor].get('elevation', 0.0))
             iv      = float(data.get('indice_veg', 0.0))
 
+            T_MAX    = 300.0
+            GAIN_MAX =  20.0
+
             t         = calculate_toblers_time(elev_u, elev_v, length)
             gain      = max(0.0, elev_v - elev_u)
-            edge_cost = w_time * t + w_elev * gain + w_veg * (1.0 - iv)
+            edge_cost = (w_time * min(t / T_MAX, 1.0)
+                       + w_elev * min(gain / GAIN_MAX, 1.0)
+                       + w_veg  * (1.0 - iv))
 
             g = dist[current] + edge_cost
             if g < dist[neighbor]:

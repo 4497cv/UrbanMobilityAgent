@@ -33,13 +33,25 @@ class UserProfile:
         self.w_veg  = w_veg
 
         if self.network_type == "drive":
-            self.elevation_active = False
+            self.elevation_active = True
             self.vegetation_active = True
             self.insecurity_active = True
         elif self.network_type == "walk":
             self.elevation_active = True
             self.vegetation_active = True
             self.insecurity_active = True
+
+        if(w_elev == 0):
+            print("Elevation is set to OFF")
+            self.elevation_active = False
+        else:
+            print("Elevation is set to ON")
+
+        if(w_veg == 0):
+            print("Vegetation is set to OFF")
+            self.vegetation_active = False
+        else:
+            print("Elevation is set to ON")
 
         print("inicialización del perfil de usuario:")
         print("tipo de ruta: %s" % self.network_type)

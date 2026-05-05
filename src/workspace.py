@@ -31,6 +31,11 @@ def get_qgis_gdl_nodes_path(nodes_shp="nodes.shp"):
 def get_graphml_gdl_path(graphml="grafo_guadalajara.graphml"):
     return os.path.join(get_qgis_gdl_shp_path(), graphml)
 
+def get_vegetation_shp_path():
+    path = os.path.join(get_qgis_gdl_shp_path(), "Vegetation")
+    os.makedirs(path, exist_ok=True)
+    return path
+
 def get_route_gdl_path():
     return os.path.join(get_workspace_path(), "QGIS", "Graph", "Guadalajara", "Route")
 

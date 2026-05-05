@@ -14,8 +14,8 @@ def __main__(algorithm_used):
 
     print("\nExecuting Algorithm for %s" % algorithm_used)
 
-    user = profiles.UserProfile("walk", "Guadalajara, Mexico",
-                                w_time=1, w_elev=0, w_veg=0)
+    user = profiles.UserProfile("drive", "Guadalajara, Mexico",
+                                w_time=0, w_elev=1, w_veg=0)
 
     if os.path.exists(workspace.get_graphml_gdl_path()):
         print("Reconstructing path from graphml file: %s" % workspace.get_qgis_gdl_shp_path())
@@ -34,8 +34,8 @@ def __main__(algorithm_used):
         else:
             print("'indice_veg' OK")
     else:
-        print("Loading graph from %s using OSMX" % user.place)
-        G = ox.graph_from_place(user.place, user.network_type)
+        print("\Dowloading graph from %s using OSMX" % user.place)
+        G = ox.graph_from_place(user.place, network_type=user.network_type)
 
         if user.elevation_active:
             print("Adding 'ele_diff' in edges — running elevation...")

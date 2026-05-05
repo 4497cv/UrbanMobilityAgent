@@ -1,3 +1,4 @@
+import os
 import osmnx as ox
 import networkx as nx
 import geopandas as gpd
@@ -8,6 +9,7 @@ from shapely.ops import unary_union
 import matplotlib.pyplot as plt
 import warnings
 import urban_mobility
+import workspace
 from joblib import Parallel, delayed
 
 tags_vegetacion = {
@@ -16,18 +18,29 @@ tags_vegetacion = {
     "natural": ["grassland", "tree_row"],
 }
 
+def _to_polygon(gdf, buffer_m=3):
+    """Buffer LineString/MultiLineString geometries to thin polygons (metric CRS assumed)."""
+    mask = gdf.geometry.type.isin(["LineString", "MultiLineString"])
+    if mask.any():
+        gdf = gdf.copy()
+        gdf.loc[mask, "geometry"] = gdf.loc[mask, "geometry"].buffer(buffer_m)
+    return gdf
+
 def descargar_areas_verdes(lugar):
     areas_verdes_lista = []
     for tag_key, tag_values in tags_vegetacion.items():
         try:
             gdf = ox.features_from_place(lugar, tags={tag_key: tag_values})
             if not gdf.empty:
-                # Filtrar solo geometrías tipo Polygon/MultiPolygon y LineString
                 gdf = gdf[gdf.geometry.type.isin(
                     ["Polygon", "MultiPolygon", "LineString", "MultiLineString"]
                 )]
                 if not gdf.empty:
-                    areas_verdes_lista.append(gdf[["geometry"]])
+                    # Convert LineStrings to thin polygons for shapefile compatibility
+                    gdf_proj = gdf[["geometry"]].to_crs(epsg=6372)
+                    gdf_proj = _to_polygon(gdf_proj)
+                    gdf_wgs = gdf_proj.to_crs(epsg=4326)
+                    areas_verdes_lista.append(gdf_wgs)
                     print(f"  {tag_key}: {len(gdf)} elementos encontrados")
         except Exception as e:
             print(f"  {tag_key}: No se encontraron datos ({e})")
@@ -144,8 +157,12 @@ def run(G, user):
     areas_verdes_proj = areas_verdes.to_crs(epsg=6372)
 
     procesar_inidices_veg(G,
-                          aristas_proj, 
+                          aristas_proj,
                           areas_verdes_proj,
                           aristas_gdf,
                           modo=MODO_CPU)
+
+    veg_path = os.path.join(workspace.get_vegetation_shp_path(), "areas_verdes.shp")
+    areas_verdes.to_file(veg_path)
+    print("Áreas verdes guardadas en: %s" % veg_path)
         

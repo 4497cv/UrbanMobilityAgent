@@ -365,22 +365,24 @@ def set_max_speed_weight(G, speed_kmh = 60):
     return G
 
 def set_elevation_weight(G, network_type="walk"):
+    workspace.set_elevation_flag(True)
+    print("> Elevation is activated")
 
-    if(network_type == "walk"):
-        workspace.set_elevation_flag(True)
-        print("> Elevation is activated")
+    for u, v, _, data in G.edges(keys=True, data=True):
+        # Get elevations of the start and end nodes
+        elevation_u = G.nodes[u].get('elevation', 0)  # Default to 0 if no elevation
+        elevation_v = G.nodes[v].get('elevation', 0)  # Default to 0 if no elevation
 
-        for u, v, k, data in G.edges(keys=True, data=True):
-            # Get elevations of the start and end nodes
-            elevation_u = G.nodes[u].get('elevation', 0)  # Default to 0 if no elevation
-            elevation_v = G.nodes[v].get('elevation', 0)  # Default to 0 if no elevation
 
-            # Use the difference in elevation as the edge weight
-            elevation_difference = abs(elevation_u - elevation_v)
-            
+        if(network_type == "walk"):
+            # Use the difference in elevation as the edge weight            
             data['ele_diff'] = calculate_toblers_time(elevation_u, elevation_v, data["length"])
+        elif(network_type == "drive"):
+            data['ele_diff'] = abs(elevation_u - elevation_v)
 
-        ox.save_graphml(G, workspace.get_graphml_gdl_path())
+
+
+    ox.save_graphml(G, workspace.get_graphml_gdl_path())
 
 
 def add_insecurity_to_nodes(G, radius_deg=0.003):
