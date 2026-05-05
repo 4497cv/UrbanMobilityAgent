@@ -10,6 +10,8 @@ class Coordinates:
     x: float
     y: float
 
+#ITESO_COORDINATES = Coordinates(20.608592, -103.414607)
+
 class UserProfile:
     network_type ="drive"
     place=""
@@ -66,4 +68,14 @@ class UserProfile:
     def get_network_type(self) -> str:
         return self.network_type
 
+    def set_start_coordinates(self, start_coordinates_x=-103.376624, start_coordinates_y=20.630163):
+        self.start_coordinates = Coordinates(x=start_coordinates_x, y=start_coordinates_y)
 
+    def set_end_coordinates(self, end_coordinates_x=-103.376624, end_coordinates_y=20.630163):
+        self.start_coordinates = Coordinates(x=end_coordinates_x, y=end_coordinates_y)
+
+    def get_start_coordinates(self):
+        return self.start_coordinates
+    
+    def get_stop_coordinates(self):
+        return self.start_coordinates

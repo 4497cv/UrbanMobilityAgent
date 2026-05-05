@@ -16,6 +16,9 @@ def __main__(algorithm_used):
 
     user = profiles.UserProfile("drive", "Guadalajara, Mexico",
                                 w_time=0, w_elev=1, w_veg=0)
+    
+    user.set_start_coordinates()
+    user.set_end_coordinates()
 
     if os.path.exists(workspace.get_graphml_gdl_path()):
         print("Reconstructing path from graphml file: %s" % workspace.get_qgis_gdl_shp_path())
@@ -72,8 +75,8 @@ def __main__(algorithm_used):
 
 
 if __name__ == "__main__":
-    __main__("weighted_astar")
-    #__main__("nsga2")
+    #__main__("weighted_astar")
+    __main__("nsga2")
     #__main__("nsga3")
 
     #workspace.open_qgis_project()
