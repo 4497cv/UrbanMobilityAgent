@@ -34,31 +34,13 @@ def get_graphml_gdl_path(graphml="grafo_guadalajara.graphml"):
 def get_route_gdl_path():
     return os.path.join(get_workspace_path(), "QGIS", "Graph", "Guadalajara", "Route")
 
-def get_route_djikstra_gdl_path():
-    path = os.path.join(get_route_gdl_path(), "Djikstra")
-    os.makedirs(path, exist_ok=True)
-    return path
-
 def get_route_a_star_gdl_path():
     path = os.path.join(get_route_gdl_path(), "A_Star")
     os.makedirs(path, exist_ok=True)
     return path
 
-def get_a_star_manhattan_shp():
-    path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_manhattan.shp")
-    return path
-
-def get_a_star_manhattan_ele_shp():
-    path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_manhattan_Elevation.shp")
-    return path
-
-def get_a_star_euclidean_shp():
-    path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_euclidean.shp")
-    return path
-
-def get_a_star_euclidean_ele_shp():
-    path = os.path.join(get_route_a_star_gdl_path(), "ruta_a_star_euclidean_Elevation.shp")
-    return path
+def get_weighted_astar_shp(parameters):
+    return os.path.join(get_route_a_star_gdl_path(), "ruta_weighted_astar" + parameters + ".shp")
 
 def gg_key():
     # todo: use encryption to hide key and store it cfg file

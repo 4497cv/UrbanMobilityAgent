@@ -4,7 +4,8 @@ import numpy as np
 import os
 import osmnx as ox
 import workspace
-from urban_mobility import calculate_toblers_time, weighted_astar, reconstruct_graph_from_graphml, set_elevation_weight, path_to_prev, reconstruct_route, plot_route
+from urban_mobility import calculate_toblers_time, reconstruct_graph_from_graphml, set_elevation_weight, path_to_prev, reconstruct_route, plot_route
+from moad import weighted_astar
 
 
 # ── Objectives ───────────────────────────────────────────────────────────────

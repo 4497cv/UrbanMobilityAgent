@@ -1,9 +1,10 @@
-from urban_mobility import reconstruct_graph_from_graphml, set_elevation_weight, weighted_astar, plot_route
+from urban_mobility import reconstruct_graph_from_graphml, set_elevation_weight, plot_route
 import osmnx as ox
 import networkx as nx
 import os
 import workspace
 import profiles
+import moad
 import nsga2
 import nsga3
 import vegetation
@@ -13,8 +14,8 @@ def __main__(algorithm_used):
 
     print("\nExecuting Algorithm for %s" % algorithm_used)
 
-    user = profiles.UserProfile("walk",
-                                "Guadalajara, Mexico")
+    user = profiles.UserProfile("walk", "Guadalajara, Mexico",
+                                w_time=1, w_elev=0, w_veg=0)
 
     if os.path.exists(workspace.get_graphml_gdl_path()):
         print("Reconstructing path from graphml file: %s" % workspace.get_qgis_gdl_shp_path())
@@ -37,9 +38,11 @@ def __main__(algorithm_used):
         G = ox.graph_from_place(user.place, user.network_type)
 
         if user.elevation_active:
+            print("Adding 'ele_diff' in edges — running elevation...")
             elevation.run(G, user)
 
         if user.vegetation_active:
+            print("Adding 'indice_veg' in edges — running vegetation...")
             vegetation.run(G, user)
 
     start_node = ox.distance.nearest_nodes(G, user.start_coordinates.x, user.start_coordinates.y)
@@ -59,13 +62,7 @@ def __main__(algorithm_used):
         return G, user
 
     if algorithm_used == "weighted_astar":
-        print("Executing Weighted A*...")
-        path = weighted_astar(G, start_node, end_node, w_time=0.5, w_elev=0.3, w_veg=0.2)
-        if path:
-            print("Route found with", len(path), "nodes")
-            plot_route("weighted_astar", G, path)
-        else:
-            print("Route not found")
+        moad.run(G, user)
     elif algorithm_used == "nsga2":
         nsga2.run_nsga2(G, user)
     elif algorithm_used == "nsga3":

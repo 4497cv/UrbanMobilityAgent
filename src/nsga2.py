@@ -5,7 +5,8 @@ import os
 import osmnx as ox
 import workspace
 import profiles
-from urban_mobility import calculate_toblers_time, weighted_astar, path_to_prev, reconstruct_route, plot_route
+from urban_mobility import calculate_toblers_time, path_to_prev, reconstruct_route, plot_route
+from moad import weighted_astar
 
 # ── Objectives ───────────────────────────────────────────────────────────────
 

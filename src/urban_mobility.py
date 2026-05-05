@@ -96,62 +96,6 @@ def distance_euclidean(p1, p2):
     """
     return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
-def weighted_astar(G, start, end, w_time, w_elev, w_veg=0.0):
-    dist = {node: float('inf') for node in G.nodes}
-    prev = {node: None for node in G.nodes}
-    dist[start] = 0.0
-    pq = [(0.0, start)]
-    visited = set()
-
-    end_x = G.nodes[end]['x']
-    end_y = G.nodes[end]['y']
-
-    while pq:
-        _, current = heapq.heappop(pq)
-        if current in visited:
-            continue
-        visited.add(current)
-        if current == end:
-            break
-
-        for neighbor in G.neighbors(current):
-            if neighbor in visited:
-                continue
-            edge_data = G.get_edge_data(current, neighbor)
-            if edge_data is None:
-                continue
-            data = edge_data.get(0, {})
-
-            length  = float(data.get('length', 1.0))
-            elev_u  = float(G.nodes[current].get('elevation', 0.0))
-            elev_v  = float(G.nodes[neighbor].get('elevation', 0.0))
-            iv      = float(data.get('indice_veg', 0.0))
-
-            t         = calculate_toblers_time(elev_u, elev_v, length)
-            gain      = max(0.0, elev_v - elev_u)
-            edge_cost = w_time * t + w_elev * gain + w_veg * (1.0 - iv)
-
-            g = dist[current] + edge_cost
-            if g < dist[neighbor]:
-                dist[neighbor] = g
-                prev[neighbor] = current
-                dx = G.nodes[neighbor]['x'] - end_x
-                dy = G.nodes[neighbor]['y'] - end_y
-                h  = np.sqrt(dx ** 2 + dy ** 2) * w_time * 0.1
-                heapq.heappush(pq, (g + h, neighbor))
-
-    path = []
-    cur  = end
-    while cur is not None:
-        path.append(cur)
-        cur = prev[cur]
-    path.reverse()
-
-    if path and path[0] == start:
-        return path
-    return None
-
-
 def dijkstra(G, start, weight="length"):
     dist = {node: float("inf") for node in G.nodes}
     prev = {node: None for node in G.nodes}
@@ -294,7 +238,7 @@ def path_to_prev(path):
     return prev
 
 
-def plot_route(algorithm_used, G, route, local_plot=False, solution_index=0):
+def plot_route(algorithm_used, G, route, local_plot=False, solution_index=0, parameters=""):
     """
     This function loads the graph from a given networkx graph, 
     saves the nodes and edges information from the graph; when
@@ -331,28 +275,14 @@ def plot_route(algorithm_used, G, route, local_plot=False, solution_index=0):
     # save resulting route in shape file
     route_gdf = ox.routing.route_to_gdf(G, route)
     
-    if("Djikstra" == algorithm_used):
-        if(workspace.get_elevation_flag() == True):
-            route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra_Elevation.shp"))
-        else:
-            route_gdf.to_file(os.path.join(workspace.get_route_djikstra_gdl_path(), "ruta_dijkstra.shp"))
-    elif("A_Star_Manhattan" == algorithm_used):
-        if(workspace.get_elevation_flag() == True):
-            route_gdf.to_file(workspace.get_a_star_manhattan_ele_shp())
-        else:
-            route_gdf.to_file(workspace.get_a_star_manhattan_shp())
-    elif("A_Star_Euclidean" == algorithm_used):
-        if(workspace.get_elevation_flag() == True):
-            route_gdf.to_file(workspace.get_a_star_euclidean_ele_shp())
-        else:
-            route_gdf.to_file(workspace.get_a_star_euclidean_shp())
-    elif("NSGA2" == algorithm_used):
+    if algorithm_used == "weighted_astar":
+        route_gdf.to_file(workspace.get_weighted_astar_shp(parameters))
+    elif algorithm_used == "NSGA2":
         route_gdf.to_file(workspace.get_nsga2_shp(solution_index))
-    elif("NSGA3" == algorithm_used):
+    elif algorithm_used == "NSGA3":
         route_gdf.to_file(workspace.get_nsga3_shp(solution_index))
     else:
-        print("Algorithm not found %s" % algorithm_used)
-        sys.exit()
+        print("Algorithm not found: %s" % algorithm_used)
 
     if(local_plot == True):
         ax.legend()
