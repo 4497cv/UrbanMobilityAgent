@@ -117,5 +117,8 @@ def get_insecurity_path():
     path = os.path.join(get_workspace_path(), "src", "insecurity")
     return path
 
+def get_areas_verdes_shp_path():
+     veg_path = os.path.join(get_vegetation_shp_path(), "areas_verdes.shp")
+     return veg_path
 
 init_workspace_path()

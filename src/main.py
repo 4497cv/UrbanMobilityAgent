@@ -14,9 +14,9 @@ def __main__(algorithm_used):
 
     print("\nExecuting Algorithm for %s" % algorithm_used)
 
-    user = profiles.UserProfile("drive", "Guadalajara, Mexico",
-                                w_time=0, w_elev=1, w_veg=0)
-    
+    user = profiles.UserProfile("drive", "ZMG",
+                                w_time=0, w_elev=1, w_veg=0.5)
+
     user.set_start_coordinates()
     user.set_end_coordinates()
 
@@ -37,8 +37,8 @@ def __main__(algorithm_used):
         else:
             print("'indice_veg' OK")
     else:
-        print("\Dowloading graph from %s using OSMX" % user.place)
-        G = ox.graph_from_place(user.place, network_type=user.network_type)
+        print("Downloading graph for ZMG (%d municipios) using OSMX" % len(user.get_place()))
+        G = ox.graph_from_place(user.get_place(), network_type=user.network_type)
 
         if user.elevation_active:
             print("Adding 'ele_diff' in edges — running elevation...")

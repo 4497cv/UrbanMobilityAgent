@@ -11,6 +11,9 @@ import warnings
 import urban_mobility
 import workspace
 from joblib import Parallel, delayed
+import profiles
+import sys
+from tqdm import tqdm
 
 tags_vegetacion = {
     "leisure": ["park", "garden", "nature_reserve", "forest"],
@@ -27,14 +30,20 @@ def _to_polygon(gdf, buffer_m=3):
     return gdf
 
 def descargar_areas_verdes(lugar):
+    # lista de areas verdes
     areas_verdes_lista = []
+
+    # iterar en los tags de vegetaciones de osmnx
     for tag_key, tag_values in tags_vegetacion.items():
         try:
+            # obtener geometria de los diferentes tipos de vegetacion usando osmnx
             gdf = ox.features_from_place(lugar, tags={tag_key: tag_values})
+            # verificar que la geometria descargada no se encuentre vacia
             if not gdf.empty:
                 gdf = gdf[gdf.geometry.type.isin(
                     ["Polygon", "MultiPolygon", "LineString", "MultiLineString"]
                 )]
+                # valida que la geometria sea correcta
                 if not gdf.empty:
                     # Convert LineStrings to thin polygons for shapefile compatibility
                     gdf_proj = gdf[["geometry"]].to_crs(epsg=6372)
@@ -67,11 +76,9 @@ def descargar_areas_verdes(lugar):
         print(f"\nTotal de elementos de vegetación: {len(areas_verdes)}")
     else:
         raise ValueError("No se encontraron áreas verdes. Verifica la zona de estudio.")
-    return areas_verdes, areas_verdes_lista
+    return areas_verdes
 
-RADIO_INFLUENCIA_M = 50  # metros
-
-def calcular_indice_veg(arista_geom, vegetacion_union, radio=RADIO_INFLUENCIA_M):
+def calcular_indice_veg(arista_geom, vegetacion_union, radio=profiles.VEG_RADIO_INFLUENCIA_M):
     """
     Calcula un índice de vegetación [0, 1] para una arista del grafo.
 
@@ -91,78 +98,101 @@ def calcular_indice_veg(arista_geom, vegetacion_union, radio=RADIO_INFLUENCIA_M)
     --------
     float : Índice entre 0 (sin vegetación) y 1 (totalmente rodeada de vegetación)
     """
-    if arista_geom is None or arista_geom.is_empty:
-        return 0.0
-
-    longitud_total = arista_geom.length
-    if longitud_total == 0:
+    # verifica que la geometría de la arista sea válida y que sea mayor que cero
+    if((arista_geom is None) or\
+      (arista_geom.is_empty) or \
+      (arista_geom.length == 0)):
         return 0.0
 
     # Muestrear puntos a lo largo de la arista cada 10 metros
-    num_muestras = max(int(longitud_total / 10), 2)
+    num_muestras = max(int(arista_geom.length / 10), 2)
+    # separar el número de muestras en fracciones
     fracciones = np.linspace(0, 1, num_muestras)
 
     puntos_cerca_verde = 0
-    for frac in fracciones:
-        punto = arista_geom.interpolate(frac, normalized=True)
+
+    for frac_arista in fracciones:
+        # verificar si hubo una intersección entre la geometría de la arista y la geometria de la vegetacion
+        punto = arista_geom.interpolate(frac_arista, normalized=True)
+
         distancia_a_verde = vegetacion_union.distance(punto)
+
         if distancia_a_verde <= radio:
             # Peso inversamente proporcional a la distancia
             puntos_cerca_verde += 1 - (distancia_a_verde / radio)
 
     indice = puntos_cerca_verde / num_muestras
+
     return round(min(indice, 1.0), 4)
 
-MODO_NORMAL = "normal"
-MODO_CPU    = "cpu"
+def procesar_inidices_veg(G, user, aristas_proj, areas_verdes_proj, aristas_gdf):
+    """
+    Procesar los indices de vegetación para cada una de las aristas. Se obtiene la proporción de la longitud de la arista que tiene vegetación
+    dentro del radio de influencia.
 
-def procesar_inidices_veg(G, aristas_proj, areas_verdes_proj, aristas_gdf, modo=MODO_NORMAL):
+    Parámetros:
+    -----------
+    G (networkx graph): Grafo en formato de networkx
+    user (UserProfile): contiene la información del perfil de usuario
+    aristas_proj: 
+    areas_verdes_proj:
+    aristas_gdf:
+    processing_mode: modo de procesamiento del GPU
+    --------
+    float : Índice entre 0 (sin vegetación) y 1 (totalmente rodeada de vegetación)
+    """
     vegetacion_union = unary_union(areas_verdes_proj.geometry)
     total = len(aristas_proj)
 
-    if modo == MODO_CPU:
-        print(f"  Calculando índice de vegetación para {total} aristas (paralelo CPU)...")
-        indices_vegetacion = Parallel(n_jobs=-1)(
-            delayed(calcular_indice_veg)(row.geometry, vegetacion_union)
-            for _, row in aristas_proj.iterrows()
+    if(user.get_processing_mode() == profiles.MODE_CPU):
+        print(f"  Calculando índice de vegetación para {total} aristas (Paralelo en CPU)...")
+        indices_vegetacion = Parallel(n_jobs = user.get_cpu_threads())(
+            delayed(calcular_indice_veg)(arista.geometry, vegetacion_union)
+            # muestra el progreso del prosamiento de las aristas en una barra
+            for _, arista in tqdm(aristas_proj.iterrows(), total=total, desc="Vegetación CPU")
         )
-    else:
-        print(f"  Calculando índice de vegetación para {total} aristas (secuencial)...")
+    elif(user.get_processing_mode() == profiles.MODE_NORMAL):
+        print(f"  Calculando índice de vegetación para {total} aristas (Sequential)...")
         indices_vegetacion = []
-        for i, (_, row) in enumerate(aristas_proj.iterrows()):
-            if (i + 1) % 1000 == 0 or i == 0:
-                print(f"  Procesando arista {i + 1}/{total}...")
-            indices_vegetacion.append(calcular_indice_veg(row.geometry, vegetacion_union))
+        # muestra el progreso del prosamiento de las aristas en una barra
+        for _, arista in tqdm(aristas_proj.iterrows(), total=total, desc="Vegetación Secuencial"):
+            indices_vegetacion.append(calcular_indice_veg(arista.geometry, vegetacion_union))
+    elif(user.get_processing_mode() == profiles.MODE_GPU):
+        print(f"  Calculando índice de vegetación para {total} aristas (Paralelo en GPU)...")
+    else:
+        sys.exit("Pefil de procesamiento no encontrado %s" % user.get_processing_mode())
 
+    # pasa el calculo de los indices de vegetación para todas las aristas
     aristas_gdf["indice_veg"] = indices_vegetacion
 
-    edge_attrs = {
-        (u, v, key): {"indice_veg": row["indice_veg"]}
-        for (u, v, key), row in aristas_gdf.iterrows()
-    }
-    nx.set_edge_attributes(G, edge_attrs)
+    edge_attrs = {}
+    for (u, v, key), row in aristas_gdf.iterrows():
+        # se hace el mapeo de indice_veg a cada uno de las aristas
+        edge_attrs[(u, v, key)] = {"indice_veg": row["indice_veg"]}
 
+    # se la nueva lista de ejes, con los atributos agregados
+    nx.set_edge_attributes(G, edge_attrs)
+    # se guarda nuevamente el el grafo en formato de networkx
     urban_mobility.save_shp_files_from_graph(G)
 
 def run(G, user):
+    # obtener las aristas de nuestro grafo
+    _, aristas_gdf = ox.graph_to_gdfs(G, nodes=True, edges=True)
 
-    lugar = user.place
-    nodos_gdf, aristas_gdf = ox.graph_to_gdfs(G, nodes=True, edges=True)
+    print("Descargando areas verdes de %s" % user.get_place())
+    areas_verdes = descargar_areas_verdes(user.get_place())
 
-    print("Descargando areas verdes de %s" % lugar)
-    areas_verdes, areas_verdes_lista = descargar_areas_verdes(lugar)
-
-    # Proyectar a sistema métrico para cálculos de distancia (EPSG:6372 para México)
+    # Proyectar geometrías a sistema métrico (EPSG:6372 para México)
     aristas_proj = aristas_gdf.to_crs(epsg=6372)
     areas_verdes_proj = areas_verdes.to_crs(epsg=6372)
 
-    procesar_inidices_veg(G,
+    # comenzar procesamiento de los indices de vegetación
+    procesar_inidices_veg(G, 
+                          user,
                           aristas_proj,
                           areas_verdes_proj,
-                          aristas_gdf,
-                          modo=MODO_CPU)
+                          aristas_gdf)
 
-    veg_path = os.path.join(workspace.get_vegetation_shp_path(), "areas_verdes.shp")
-    areas_verdes.to_file(veg_path)
-    print("Áreas verdes guardadas en: %s" % veg_path)
+    # guardar geometrías de areas verdes en formato shp
+    areas_verdes.to_file(workspace.get_areas_verdes_shp_path())
         

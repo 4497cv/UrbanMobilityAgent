@@ -1,4 +1,14 @@
 from dataclasses import dataclass
+import sys
+
+ZMG_PLACES = [
+    "Guadalajara, Jalisco, Mexico",
+    #"Zapopan, Jalisco, Mexico",
+    "San Pedro Tlaquepaque, Jalisco, Mexico",
+    #"Tonalá, Jalisco, Mexico",
+    #"Tlajomulco de Zúñiga, Jalisco, Mexico",
+    #"El Salto, Jalisco, Mexico",
+]
 
 network_types = {
     "drive",
@@ -10,7 +20,14 @@ class Coordinates:
     x: float
     y: float
 
-#ITESO_COORDINATES = Coordinates(20.608592, -103.414607)
+ITESO_COORDINATES = Coordinates(20.608592, -103.414607)
+PROVI_COORDINATES = Coordinates(20.700157, -103.383641)
+
+MODE_NORMAL = "normal"
+MODE_CPU    = "cpu"
+MODE_GPU    = "gpu"
+CPU_THREADS_LIM = 15
+VEG_RADIO_INFLUENCIA_M = 50  # metros
 
 class UserProfile:
     network_type ="drive"
@@ -18,6 +35,8 @@ class UserProfile:
     elevation_active = False
     vegetation_active = False
     insecurity_active = False
+    processing_mode = MODE_CPU
+    ncpu_threads = 12
     start_coordinates = Coordinates(x=-103.376624, y=20.630163)
     end_coordinates   = Coordinates(x=-103.384384, y=20.697814)
     w_time = 0
@@ -79,3 +98,28 @@ class UserProfile:
     
     def get_stop_coordinates(self):
         return self.start_coordinates
+    
+    def get_place(self):
+        if(self.place == "ZMG"):
+            return ZMG_PLACES
+        else:
+            return self.place
+    
+    def get_processing_mode(self):
+        return self.processing_mode
+    
+    def set_processing_mode(self, processing_mode):
+        if((MODE_NORMAL == processing_mode) or
+           (MODE_CPU    == processing_mode) or
+           (MODE_GPU    == processing_mode)):
+            return self.processing_mode
+        else:
+            sys.exit("incorrect processing mode has been set %s" % processing_mode)
+
+
+    def get_cpu_threads(self):
+        return self.ncpu_threads
+    
+    def set_cpu_threads(self, n_threads):
+        if((n_threads >= 0) and (n_threads < CPU_THREADS_LIM)):
+            self.ncpu_threads = n_threads
