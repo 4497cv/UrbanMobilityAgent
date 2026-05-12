@@ -175,6 +175,7 @@ def procesar_inidices_veg(G, user, aristas_proj, areas_verdes_proj, aristas_gdf)
     vegetacion_union = unary_union(areas_verdes_proj.geometry)
     total = len(aristas_proj)
 
+
     # STRtree sobre sub-geometrías: O(log n) por consulta en vez de O(n)
     veg_geoms = (np.array(list(vegetacion_union.geoms), dtype=object)
                  if hasattr(vegetacion_union, "geoms")
@@ -227,7 +228,7 @@ def run(G, user):
     aristas_proj = aristas_gdf.to_crs(epsg=6372)
     areas_verdes_proj = areas_verdes.to_crs(epsg=6372)
 
-    user.set_processing_mode(profiles.MODE_GPU)
+    user.set_processing_mode(profiles.MODE_CPU)
 
     # comenzar procesamiento de los indices de vegetación
     procesar_inidices_veg(G, 

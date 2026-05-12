@@ -1,0 +1,78 @@
+
+============================================================
+[2026-05-12 11:03:22] Executing Algorithm for nsga2
+============================================================
+Elevation is set to ON
+Elevation is set to ON
+inicialización del perfil de usuario:
+tipo de ruta: drive
+lugar: ZMG
+coordenadas de inicio: x=-103.376624, y=20.630163
+coordenadas de destino: x=-103.384384, y=20.697814
+pesos: w_time=0.00  w_elev=1.00  w_veg=0.50
+Reconstructing path from graphml file: /home/cv4497/git/UrbanMobilityAgent/QGIS/Graph/Guadalajara
+'ele_diff' OK
+'indice_veg' OK
+Number of nodes: 117233
+Number of edges: 283446
+Start Node: 1358280144
+Destination Node: 1377171313
+[NSGA-II] Seeding population (4 individuals)...
+[NSGA-II] Population ready: 4 paths
+[NSGA-II] Gen   1/150  |  Pareto front: 6 solutions
+[NSGA-II] Gen  11/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  21/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  31/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  41/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  51/150  |  Pareto front: 7 solutions
+[NSGA-II] Gen  61/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  71/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  81/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  91/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 101/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 111/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 121/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 131/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 141/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 150/150  |  Pareto front: 8 solutions
+[NSGA-II] Done. 4 non-dominated solutions.
+
+── Pareto Front ──────────────────────────────────
+    #      Time (s)   Elev gain (m)    Veg cost   Nodes
+    0        7741.0           65.24      0.5257     117
+    1        7741.0           65.24      0.5257     117
+    2        9238.2           74.68      0.4067     114
+    3        9238.2           74.68      0.4067     114
+
+============================================================
+[2026-05-12 11:05:48] Executing Algorithm for nsga2
+============================================================
+Elevation is set to ON
+Elevation is set to ON
+inicialización del perfil de usuario:
+tipo de ruta: drive
+lugar: ZMG
+coordenadas de inicio: x=-103.376624, y=20.630163
+coordenadas de destino: x=-103.384384, y=20.697814
+pesos: w_time=0.00  w_elev=1.00  w_veg=0.50
+Downloading graph for ZMG (6 municipios) using OSMX
+Adding 'ele_diff' in edges — running elevation...
+Adding Elevations to Graph of ZMG using OSMX
+Saving shape files
+> Elevation is activated
+[2026-05-12 11:09:38] elevation.run: 118.45s
+Adding 'indice_veg' in edges — running vegetation...
+Descargando areas verdes de ['Guadalajara, Jalisco, Mexico', 'Zapopan, Jalisco, Mexico', 'San Pedro Tlaquepaque, Jalisco, Mexico', 'Tonalá, Jalisco, Mexico', 'Tlajomulco de Zúñiga, Jalisco, Mexico', 'El Salto, Jalisco, Mexico']
+  leisure: 2912 elementos encontrados
+  landuse: 1272 elementos encontrados
+  natural: 321 elementos encontrados
+  Árboles individuales: 2510 encontrados
+
+Total de elementos de vegetación: 7015
+  Calculando índice de vegetación para 283446 aristas (Paralelo en CPU)...
+[2026-05-12 11:16:21] vegetation.run: 403.13s
+Number of nodes: 117233
+Number of edges: 283446
+Start Node: 1358280144
+Destination Node: 1377171313
+[NSGA-II] Seeding population (4 individuals)...

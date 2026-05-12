@@ -112,7 +112,7 @@ class UserProfile:
         if((MODE_NORMAL == processing_mode) or
            (MODE_CPU    == processing_mode) or
            (MODE_GPU    == processing_mode)):
-            return self.processing_mode
+            self.processing_mode = processing_mode
         else:
             sys.exit("incorrect processing mode has been set %s" % processing_mode)
 
