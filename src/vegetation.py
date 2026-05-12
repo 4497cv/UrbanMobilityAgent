@@ -4,6 +4,7 @@ import networkx as nx
 import geopandas as gpd
 import pandas as pd
 import numpy as np
+import shapely
 from shapely.geometry import LineString, Point
 from shapely.ops import unary_union
 import matplotlib.pyplot as plt
@@ -14,6 +15,12 @@ from joblib import Parallel, delayed
 import profiles
 import sys
 from tqdm import tqdm
+
+try:
+    import cupy as cp
+    _CUPY_AVAILABLE = True
+except ImportError:
+    _CUPY_AVAILABLE = False
 
 tags_vegetacion = {
     "leisure": ["park", "garden", "nature_reserve", "forest"],
@@ -78,52 +85,76 @@ def descargar_areas_verdes(lugar):
         raise ValueError("No se encontraron áreas verdes. Verifica la zona de estudio.")
     return areas_verdes
 
-def calcular_indice_veg(arista_geom, vegetacion_union, radio=profiles.VEG_RADIO_INFLUENCIA_M):
+def calcular_indice_veg(arista_geom, veg_tree, veg_geoms, radio=profiles.VEG_RADIO_INFLUENCIA_M):
     """
     Calcula un índice de vegetación [0, 1] para una arista del grafo.
 
-    Método: Proporción de la longitud de la arista que tiene vegetación
-    dentro del radio de influencia.
-
-    Parámetros:
-    -----------
-    arista_geom : shapely geometry
-        Geometría de la arista (LineString)
-    vegetacion_union : shapely geometry
-        Unión de todas las áreas verdes
-    radio : float
-        Radio de influencia en metros
-
-    Retorna:
-    --------
-    float : Índice entre 0 (sin vegetación) y 1 (totalmente rodeada de vegetación)
+    Usa STRtree para encontrar la sub-geometría más cercana a cada punto de muestra
+    en O(log n) en vez de O(n) sobre todo el MultiPolygon.
     """
-    # verifica que la geometría de la arista sea válida y que sea mayor que cero
-    if((arista_geom is None) or\
-      (arista_geom.is_empty) or \
-      (arista_geom.length == 0)):
+    if arista_geom is None or arista_geom.is_empty or arista_geom.length == 0:
         return 0.0
 
-    # Muestrear puntos a lo largo de la arista cada 10 metros
-    num_muestras = max(int(arista_geom.length / 10), 2)
-    # separar el número de muestras en fracciones
-    fracciones = np.linspace(0, 1, num_muestras)
+    num_muestras  = max(int(arista_geom.length / 10), 2)
+    puntos        = shapely.line_interpolate_point(arista_geom, np.linspace(0, 1, num_muestras), normalized=True)
+    nearest_idx   = veg_tree.nearest(puntos)
+    distancias    = shapely.distance(puntos, veg_geoms[nearest_idx])
 
-    puntos_cerca_verde = 0
+    pesos  = np.where(distancias <= radio, 1.0 - distancias / radio, 0.0)
+    return round(float(min(pesos.sum() / num_muestras, 1.0)), 4)
 
-    for frac_arista in fracciones:
-        # verificar si hubo una intersección entre la geometría de la arista y la geometria de la vegetacion
-        punto = arista_geom.interpolate(frac_arista, normalized=True)
 
-        distancia_a_verde = vegetacion_union.distance(punto)
+def _calcular_indices_veg_gpu(aristas_proj, vegetacion_union, radio):
+    """
+    Misma lógica que calcular_indice_veg pero vectorizada para todas las aristas:
+    STRtree.nearest + shapely.distance en batch, pesos en GPU.
+    """
+    veg_geoms = (np.array(list(vegetacion_union.geoms), dtype=object)
+                 if hasattr(vegetacion_union, "geoms")
+                 else np.array([vegetacion_union], dtype=object))
+    veg_tree = shapely.STRtree(veg_geoms)
 
-        if distancia_a_verde <= radio:
-            # Peso inversamente proporcional a la distancia
-            puntos_cerca_verde += 1 - (distancia_a_verde / radio)
+    # Generar todos los puntos de muestra para todas las aristas
+    all_pts    = []
+    boundaries = []
+    idx        = 0
 
-    indice = puntos_cerca_verde / num_muestras
+    for geom in aristas_proj.geometry:
+        if geom is None or geom.is_empty or geom.length == 0:
+            boundaries.append((idx, idx))
+            continue
+        n   = max(int(geom.length / 10), 2)
+        pts = shapely.line_interpolate_point(geom, np.linspace(0, 1, n), normalized=True)
+        all_pts.append(pts)
+        boundaries.append((idx, idx + n))
+        idx += n
 
-    return round(min(indice, 1.0), 4)
+    if not all_pts:
+        return [0.0] * len(boundaries)
+
+    all_pts_flat = np.concatenate(all_pts)
+    print(f"    {len(all_pts_flat)} puntos de muestra para {len(aristas_proj)} aristas")
+
+    # Distancias con STRtree — igual que calcular_indice_veg, maneja interior (dist=0)
+    nearest_idx = veg_tree.nearest(all_pts_flat)
+    distancias  = shapely.distance(all_pts_flat, veg_geoms[nearest_idx]).astype(np.float32)
+
+    # Pesos en GPU
+    radio_f  = np.float32(radio)
+    dist_gpu = cp.asarray(distancias)
+    pesos    = cp.asnumpy(cp.where(dist_gpu <= radio_f, 1.0 - dist_gpu / radio_f, cp.float32(0.0)))
+
+    # Agregar por arista
+    indices = []
+    for start_i, end_i in boundaries:
+        if start_i == end_i:
+            indices.append(0.0)
+            continue
+        w = pesos[start_i:end_i]
+        indices.append(round(float(min(w.sum() / (end_i - start_i), 1.0)), 4))
+
+    return indices
+
 
 def procesar_inidices_veg(G, user, aristas_proj, areas_verdes_proj, aristas_gdf):
     """
@@ -144,21 +175,31 @@ def procesar_inidices_veg(G, user, aristas_proj, areas_verdes_proj, aristas_gdf)
     vegetacion_union = unary_union(areas_verdes_proj.geometry)
     total = len(aristas_proj)
 
+    # STRtree sobre sub-geometrías: O(log n) por consulta en vez de O(n)
+    veg_geoms = (np.array(list(vegetacion_union.geoms), dtype=object)
+                 if hasattr(vegetacion_union, "geoms")
+                 else np.array([vegetacion_union], dtype=object))
+    veg_tree  = shapely.STRtree(veg_geoms)
+
     if(user.get_processing_mode() == profiles.MODE_CPU):
         print(f"  Calculando índice de vegetación para {total} aristas (Paralelo en CPU)...")
-        indices_vegetacion = Parallel(n_jobs = user.get_cpu_threads())(
-            delayed(calcular_indice_veg)(arista.geometry, vegetacion_union)
-            # muestra el progreso del prosamiento de las aristas en una barra
+        # threading: comparte veg_tree sin pickle (STRtree es thread-safe en Shapely 2.x)
+        indices_vegetacion = Parallel(n_jobs=user.get_cpu_threads(), backend="threading")(
+            delayed(calcular_indice_veg)(arista.geometry, veg_tree, veg_geoms)
             for _, arista in tqdm(aristas_proj.iterrows(), total=total, desc="Vegetación CPU")
         )
     elif(user.get_processing_mode() == profiles.MODE_NORMAL):
         print(f"  Calculando índice de vegetación para {total} aristas (Sequential)...")
         indices_vegetacion = []
-        # muestra el progreso del prosamiento de las aristas en una barra
         for _, arista in tqdm(aristas_proj.iterrows(), total=total, desc="Vegetación Secuencial"):
-            indices_vegetacion.append(calcular_indice_veg(arista.geometry, vegetacion_union))
+            indices_vegetacion.append(calcular_indice_veg(arista.geometry, veg_tree, veg_geoms))
     elif(user.get_processing_mode() == profiles.MODE_GPU):
-        print(f"  Calculando índice de vegetación para {total} aristas (Paralelo en GPU)...")
+        if not _CUPY_AVAILABLE:
+            sys.exit("CuPy no está instalado. Instálalo con: pip install cupy-cuda12x")
+        print(f"  Calculando índice de vegetación para {total} aristas (GPU con CuPy)...")
+        indices_vegetacion = _calcular_indices_veg_gpu(
+            aristas_proj, vegetacion_union, profiles.VEG_RADIO_INFLUENCIA_M
+        )
     else:
         sys.exit("Pefil de procesamiento no encontrado %s" % user.get_processing_mode())
 
@@ -185,6 +226,8 @@ def run(G, user):
     # Proyectar geometrías a sistema métrico (EPSG:6372 para México)
     aristas_proj = aristas_gdf.to_crs(epsg=6372)
     areas_verdes_proj = areas_verdes.to_crs(epsg=6372)
+
+    user.set_processing_mode(profiles.MODE_GPU)
 
     # comenzar procesamiento de los indices de vegetación
     procesar_inidices_veg(G, 

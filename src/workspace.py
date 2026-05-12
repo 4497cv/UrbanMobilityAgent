@@ -121,4 +121,9 @@ def get_areas_verdes_shp_path():
      veg_path = os.path.join(get_vegetation_shp_path(), "areas_verdes.shp")
      return veg_path
 
+def get_log_path():
+    log_dir = os.path.join(get_workspace_path(), "log")
+    os.makedirs(log_dir, exist_ok=True)
+    return os.path.join(log_dir, "timing.log")
+
 init_workspace_path()

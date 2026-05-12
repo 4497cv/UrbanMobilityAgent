@@ -3,11 +3,11 @@ import sys
 
 ZMG_PLACES = [
     "Guadalajara, Jalisco, Mexico",
-    #"Zapopan, Jalisco, Mexico",
+    "Zapopan, Jalisco, Mexico",
     "San Pedro Tlaquepaque, Jalisco, Mexico",
-    #"Tonalá, Jalisco, Mexico",
-    #"Tlajomulco de Zúñiga, Jalisco, Mexico",
-    #"El Salto, Jalisco, Mexico",
+    "Tonalá, Jalisco, Mexico",
+    "Tlajomulco de Zúñiga, Jalisco, Mexico",
+    "El Salto, Jalisco, Mexico",
 ]
 
 network_types = {
@@ -35,7 +35,7 @@ class UserProfile:
     elevation_active = False
     vegetation_active = False
     insecurity_active = False
-    processing_mode = MODE_CPU
+    processing_mode = MODE_NORMAL
     ncpu_threads = 12
     start_coordinates = Coordinates(x=-103.376624, y=20.630163)
     end_coordinates   = Coordinates(x=-103.384384, y=20.697814)
