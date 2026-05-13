@@ -11,11 +11,10 @@ import vegetation
 import elevation
 
 def __main__(algorithm_used):
-
     print("\nExecuting Algorithm for %s" % algorithm_used)
 
     user = profiles.UserProfile("drive", "ZMG",
-                                w_time=0, w_elev=1, w_veg=0.5)
+                                w_time=0.5, w_elev=0.5, w_veg=0.5)
 
     user.set_start_coordinates()
     user.set_end_coordinates()

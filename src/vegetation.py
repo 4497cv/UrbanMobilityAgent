@@ -114,17 +114,38 @@ def calcular_indice_veg(arista_geom, vegetacion_union, radio=profiles.VEG_RADIO_
     for frac_arista in fracciones:
         # verificar si hubo una intersección entre la geometría de la arista y la geometria de la vegetacion
         punto = arista_geom.interpolate(frac_arista, normalized=True)
-
+        # obtenemos la distancia entre el área verde y el punto fraccionado de la arista
         distancia_a_verde = vegetacion_union.distance(punto)
 
-        if distancia_a_verde <= radio:
+        # si la distancia es mayor al radio el punto se ignora
+        if(distancia_a_verde <= radio):
             # Peso inversamente proporcional a la distancia
             puntos_cerca_verde += 1 - (distancia_a_verde / radio)
 
+    # calculamos la proporcion de la arista que tiene vegetacion
     indice = puntos_cerca_verde / num_muestras
 
     return round(min(indice, 1.0), 4)
 
+def calcular_indice_veg_gpu(arista_geom, vegetacion_union, radio=profiles.VEG_RADIO_INFLUENCIA_M):
+    if arista_geom is None or arista_geom.is_empty or arista_geom.length == 0:
+        return 0.0
+
+    num_muestras = max(int(arista_geom.length / 10), 2)
+    fracciones = np.linspace(0, 1, num_muestras)
+
+    distancias = np.array([
+        vegetacion_union.distance(arista_geom.interpolate(f, normalized=True))
+        for f in fracciones
+    ])
+
+    distancias_gpu = cp.asarray(distancias)
+    mascara = distancias_gpu <= radio
+    pesos = cp.where(mascara, 1.0 - (distancias_gpu / radio), 0.0)
+    indice = float(pesos.sum() / num_muestras)
+
+    return round(min(indice, 1.0), 4)
+	
 def procesar_inidices_veg(G, user, aristas_proj, areas_verdes_proj, aristas_gdf):
     """
     Procesar los indices de vegetación para cada una de las aristas. Se obtiene la proporción de la longitud de la arista que tiene vegetación
@@ -159,6 +180,11 @@ def procesar_inidices_veg(G, user, aristas_proj, areas_verdes_proj, aristas_gdf)
             indices_vegetacion.append(calcular_indice_veg(arista.geometry, vegetacion_union))
     elif(user.get_processing_mode() == profiles.MODE_GPU):
         print(f"  Calculando índice de vegetación para {total} aristas (Paralelo en GPU)...")
+		print(f"  Calculando índice de vegetación para {total} aristas (Sequential)...")
+        indices_vegetacion = []
+        # muestra el progreso del prosamiento de las aristas en una barra
+        for _, arista in tqdm(aristas_proj.iterrows(), total=total, desc="Vegetación Secuencial"):
+            indices_vegetacion.append(calcular_indice_veg_gpu(arista.geometry, vegetacion_union))
     else:
         sys.exit("Pefil de procesamiento no encontrado %s" % user.get_processing_mode())
 
@@ -195,4 +221,5 @@ def run(G, user):
 
     # guardar geometrías de areas verdes en formato shp
     areas_verdes.to_file(workspace.get_areas_verdes_shp_path())
+        
         

@@ -283,7 +283,7 @@ def run_nsga2(G, user):
     start_node = ox.distance.nearest_nodes(G, start_lon, start_lat)
     end_node   = ox.distance.nearest_nodes(G, end_lon,   end_lat)
 
-    pareto = nsga2(G, start_node, end_node, pop_size=4, generations=150)
+    pareto = nsga2(G, start_node, end_node, pop_size=20, generations=10)
 
     print("\n── Pareto Front ──────────────────────────────────")
     print(f"  {'#':>3}  {'Time (s)':>12}  {'Elev gain (m)':>14}  {'Veg cost':>10}  {'Nodes':>6}")
