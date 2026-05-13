@@ -4,6 +4,7 @@ import networkx as nx
 import geopandas as gpd
 import pandas as pd
 import numpy as np
+import cupy as cp
 from shapely.geometry import LineString, Point
 from shapely.ops import unary_union
 import matplotlib.pyplot as plt
@@ -79,25 +80,6 @@ def descargar_areas_verdes(lugar):
     return areas_verdes
 
 def calcular_indice_veg(arista_geom, vegetacion_union, radio=profiles.VEG_RADIO_INFLUENCIA_M):
-    """
-    Calcula un índice de vegetación [0, 1] para una arista del grafo.
-
-    Método: Proporción de la longitud de la arista que tiene vegetación
-    dentro del radio de influencia.
-
-    Parámetros:
-    -----------
-    arista_geom : shapely geometry
-        Geometría de la arista (LineString)
-    vegetacion_union : shapely geometry
-        Unión de todas las áreas verdes
-    radio : float
-        Radio de influencia en metros
-
-    Retorna:
-    --------
-    float : Índice entre 0 (sin vegetación) y 1 (totalmente rodeada de vegetación)
-    """
     # verifica que la geometría de la arista sea válida y que sea mayor que cero
     if((arista_geom is None) or\
       (arista_geom.is_empty) or \
@@ -134,10 +116,9 @@ def calcular_indice_veg_gpu(arista_geom, vegetacion_union, radio=profiles.VEG_RA
     num_muestras = max(int(arista_geom.length / 10), 2)
     fracciones = np.linspace(0, 1, num_muestras)
 
-    distancias = np.array([
-        vegetacion_union.distance(arista_geom.interpolate(f, normalized=True))
-        for f in fracciones
-    ])
+    distancias = np.empty(len(fracciones))
+    for i, f in enumerate(fracciones):
+        distancias[i] = vegetacion_union.distance(arista_geom.interpolate(f, normalized=True))
 
     distancias_gpu = cp.asarray(distancias)
     mascara = distancias_gpu <= radio
