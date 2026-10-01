@@ -35,23 +35,25 @@ class UserProfile:
     elevation_active = False
     vegetation_active = False
     insecurity_active = False
-    processing_mode = MODE_CPU
+    processing_mode = MODE_GPU
     ncpu_threads = 12
     start_coordinates = Coordinates(x=-103.376624, y=20.630163)
     end_coordinates   = Coordinates(x=-103.384384, y=20.697814)
     w_time = 0
     w_elev = 0
     w_veg = 0
+    w_sec = 0
 
     def __init__(self, network_type="drive", place="Guadalajara, Mexico",
                  start_coordinates_x=-103.376624, start_coordinates_y=20.630163,
                  end_coordinates_x=-103.384384, end_coordinates_y=20.697814,
-                 w_time=0.5, w_elev=0.3, w_veg=0.2):
+                 w_time=0.5, w_elev=0.0, w_veg=0.0, w_sec=0.5):
         self.network_type = network_type
         self.place = place
         self.w_time = w_time
         self.w_elev = w_elev
         self.w_veg  = w_veg
+        self.w_sec = w_sec
 
         if self.network_type == "drive":
             self.elevation_active = True

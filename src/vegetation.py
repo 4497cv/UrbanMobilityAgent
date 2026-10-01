@@ -161,7 +161,7 @@ def procesar_inidices_veg(G, user, aristas_proj, areas_verdes_proj, aristas_gdf)
             indices_vegetacion.append(calcular_indice_veg(arista.geometry, vegetacion_union))
     elif(user.get_processing_mode() == profiles.MODE_GPU):
         print(f"  Calculando índice de vegetación para {total} aristas (Paralelo en GPU)...")
-		print(f"  Calculando índice de vegetación para {total} aristas (Sequential)...")
+        print(f"  Calculando índice de vegetación para {total} aristas (Sequential)...")
         indices_vegetacion = []
         # muestra el progreso del prosamiento de las aristas en una barra
         for _, arista in tqdm(aristas_proj.iterrows(), total=total, desc="Vegetación Secuencial"):

@@ -3,7 +3,7 @@ import numpy as np
 import osmnx as ox
 from urban_mobility import calculate_toblers_time, plot_route
 
-def weighted_astar(G, start, end, w_time, w_elev, w_veg=0.0):
+def weighted_astar(G, start, end, w_time, w_elev, w_veg=0.0, w_sec = 0.0):
     dist = {node: float('inf') for node in G.nodes}
     prev = {node: None for node in G.nodes}
     dist[start] = 0.0
@@ -41,7 +41,8 @@ def weighted_astar(G, start, end, w_time, w_elev, w_veg=0.0):
             gain      = max(0.0, elev_v - elev_u)
             edge_cost = (w_time * min(t / T_MAX, 1.0)
                        + w_elev * min(gain / GAIN_MAX, 1.0)
-                       + w_veg  * (1.0 - iv))
+                       + w_veg  * (1.0 - iv)
+                       + w_sec)
 
             g = dist[current] + edge_cost
             if g < dist[neighbor]:
@@ -68,8 +69,8 @@ def run(G, user):
     start_node = ox.distance.nearest_nodes(G, user.start_coordinates.x, user.start_coordinates.y)
     end_node   = ox.distance.nearest_nodes(G, user.end_coordinates.x,   user.end_coordinates.y)
 
-    print(f"[Weighted A*] w_time={user.w_time}  w_elev={user.w_elev}  w_veg={user.w_veg}")
-    path = weighted_astar(G, start_node, end_node, w_time=user.w_time, w_elev=user.w_elev, w_veg=user.w_veg)
+    print(f"[Weighted A*] w_time={user.w_time}  w_elev={user.w_elev}  w_veg={user.w_veg} w_sec={user.w_sec}")
+    path = weighted_astar(G, start_node, end_node, w_time=user.w_time, w_elev=user.w_elev, w_veg=user.w_veg, w_sec = user.w_sec)
 
     if path:
         print(f"[Weighted A*] Route found with {len(path)} nodes")
