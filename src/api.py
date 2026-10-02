@@ -1,19 +1,21 @@
 """
 Flask backend for the Urban Mobility Lab GUI.
 Run with:  python api.py
-Then open: GUI/lab.html in a browser.
+Then open: http://localhost:5000
 """
 import sys, os, threading, uuid, time as _time, contextlib
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
-GUI_DIR = os.path.join(os.path.dirname(__file__), '..', 'GUI')
+GUI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'GUI')
 
 import workspace  # sets CWD to project root on import
 import nsga2 as _nsga2
 import nsga3 as _nsga3
+import insecurity
+from moad import weighted_astar
 from urban_mobility import (
     reconstruct_graph_from_graphml,
     set_elevation_weight,
@@ -22,7 +24,6 @@ from urban_mobility import (
     distance_manhattan,
     distance_euclidean,
     reconstruct_route,
-    add_insecurity_to_nodes,
 )
 import osmnx as ox
 
@@ -46,12 +47,32 @@ def _load_graph():
         if not os.path.exists(path):
             return None, "Graph file not found. Run main.py first."
         _G = reconstruct_graph_from_graphml(path)
-        add_insecurity_to_nodes(_G)
         return _G, None
+
+def _ensure_insecurity(G, hour):
+    """(Re)computes 'indice_inseg' on the edges when the requested hour changes."""
+    with _G_lock:
+        if G.graph.get('hora_inseg') != hour:
+            insecurity.run(G, None, hora=hour)
 
 def _path_coords(G, path):
     """Convert list of node IDs to [[lat, lon], ...] for Leaflet."""
     return [[float(G.nodes[n]['y']), float(G.nodes[n]['x'])] for n in path]
+
+def _route(G, path):
+    """Metrics + coordinates of a path, the same for every algorithm."""
+    t, gain, veg = _nsga2.evaluate(G, path)
+    length = 0.0
+    inseg = 0.0
+    for u, v in zip(path[:-1], path[1:]):
+        data = G.get_edge_data(u, v).get(0, {})
+        length += float(data.get('length', 0.0))
+        inseg  += float(data.get('indice_inseg', 0.0))
+    edges = max(len(path) - 1, 1)
+    return {'time_s': round(t, 1), 'elev_gain_m': round(gain, 2),
+            'veg_cost': round(veg, 3), 'insecurity': round(inseg / edges, 3),
+            'length_m': round(length, 1), 'nodes': len(path),
+            'coords': _path_coords(G, path)}
 
 # ── Job management ─────────────────────────────────────────────────────────────
 
@@ -125,12 +146,7 @@ def _run_dijkstra(jid, elevation, start_node, end_node):
         path = reconstruct_route(prev, start_node, end_node)
         if not path:
             return _fail(jid, "No path found between the selected nodes.")
-        _done(jid, {
-            'type': 'single', 'algorithm': 'Dijkstra',
-            'time_s': round(dist[end_node], 1),
-            'nodes': len(path),
-            'coords': _path_coords(G, path),
-        })
+        _done(jid, {'type': 'single', 'algorithm': 'Dijkstra', 'route': _route(G, path)})
     except Exception as e:
         _fail(jid, str(e))
 
@@ -150,12 +166,7 @@ def _run_astar(jid, heuristic_name, elevation, start_node, end_node):
         path = reconstruct_route(prev, start_node, end_node)
         if not path:
             return _fail(jid, "No path found between the selected nodes.")
-        _done(jid, {
-            'type': 'single', 'algorithm': label,
-            'time_s': round(dist[end_node], 1),
-            'nodes': len(path),
-            'coords': _path_coords(G, path),
-        })
+        _done(jid, {'type': 'single', 'algorithm': label, 'route': _route(G, path)})
     except Exception as e:
         _fail(jid, str(e))
 
@@ -177,11 +188,7 @@ def _run_nsga(jid, version, pop_size, generations, mutation_rate, divisions, sta
                                       pop_size=pop_size, generations=generations,
                                       mutation_rate=mutation_rate, divisions=divisions)
         elapsed = round(_time.perf_counter() - t0, 1)
-        solutions = [
-            {'time_s': round(t, 1), 'elev_gain_m': round(e, 2),
-             'nodes': len(p), 'coords': _path_coords(G, p)}
-            for p, (t, e) in pareto
-        ]
+        solutions = [_route(G, p) for p, _ in pareto]
         _done(jid, {'type': 'pareto', 'algorithm': label,
                     'solutions': solutions, 'compute_time_s': elapsed})
     except Exception as e:
@@ -208,16 +215,28 @@ def _run_compare(jid, pop_size, generations, mutation_rate, divisions, start_nod
                                    mutation_rate=mutation_rate, divisions=divisions)
         time3 = round(_time.perf_counter() - t0, 1)
 
-        def serialize(pareto):
-            return [{'time_s': round(t, 1), 'elev_gain_m': round(e, 2),
-                     'nodes': len(p), 'coords': _path_coords(G, p)}
-                    for p, (t, e) in pareto]
-
         _done(jid, {
             'type': 'compare',
-            'nsga2': {'solutions': serialize(pareto2), 'compute_time_s': time2},
-            'nsga3': {'solutions': serialize(pareto3), 'compute_time_s': time3},
+            'nsga2': {'solutions': [_route(G, p) for p, _ in pareto2], 'compute_time_s': time2},
+            'nsga3': {'solutions': [_route(G, p) for p, _ in pareto3], 'compute_time_s': time3},
         })
+    except Exception as e:
+        _fail(jid, str(e))
+
+
+def _run_weighted_astar(jid, weights, start_node, end_node):
+    try:
+        G, err = _load_graph()
+        if err:
+            return _fail(jid, err)
+        t0 = _time.perf_counter()
+        with _capture(jid):
+            print("Weighted A*  w_time=%.2f  w_elev=%.2f  w_veg=%.2f  w_sec=%.2f" % weights)
+            path = weighted_astar(G, start_node, end_node, *weights)
+        if not path:
+            return _fail(jid, "No path found between the selected nodes.")
+        _done(jid, {'type': 'single', 'algorithm': 'Weighted A*', 'route': _route(G, path),
+                    'compute_time_s': round(_time.perf_counter() - t0, 1)})
     except Exception as e:
         _fail(jid, str(e))
 
@@ -239,6 +258,29 @@ def graph_status():
     return jsonify({'exists': exists})
 
 
+_grid_cache: dict = {}
+
+@app.route('/api/insecurity')
+def insecurity_grid():
+    """500 m cells with their final SI (0-100) at the requested hour, for the map layer."""
+    hour = int(request.args.get('hour', 12)) % 24
+    if hour not in _grid_cache:
+        cells = insecurity.cargar_modelo()['si_calculado'].index.droplevel('hora').unique()
+        ix = cells.get_level_values(0).to_numpy()
+        iy = cells.get_level_values(1).to_numpy()
+        dlat = insecurity.TAM_CELDA / insecurity.KM_POR_GRADO_LAT
+        dlon = insecurity.TAM_CELDA / insecurity.KM_POR_GRADO_LON
+        lat0 = insecurity.LAT0 + iy * dlat   # south-west corner
+        lon0 = insecurity.LON0 + ix * dlon
+        si = insecurity.si_en(lat0 + dlat / 2, lon0 + dlon / 2, hour)
+        _grid_cache[hour] = {
+            'hour': hour, 'dlat': dlat, 'dlon': dlon,
+            'cells': [[round(float(a), 6), round(float(o), 6), round(float(v), 1)]
+                      for a, o, v in zip(lat0, lon0, si)],
+        }
+    return jsonify(_grid_cache[hour])
+
+
 @app.route('/api/run', methods=['POST'])
 def run():
     data = request.json or {}
@@ -249,10 +291,14 @@ def run():
     start_lon = float(data.get('start_lon', -103.376624))
     end_lat   = float(data.get('end_lat',   20.697814))
     end_lon   = float(data.get('end_lon',  -103.384384))
+    hour      = int(data.get('hour', 12)) % 24
+    weights   = tuple(max(0.0, min(1.0, float(params.get(k, d))))
+                      for k, d in (('w_time', 0.5), ('w_elev', 0.0), ('w_veg', 0.0), ('w_sec', 0.5)))
 
     G, err = _load_graph()
     if err:
         return jsonify({'error': err}), 400
+    _ensure_insecurity(G, hour)
 
     start_node = ox.distance.nearest_nodes(G, start_lon, start_lat)
     end_node   = ox.distance.nearest_nodes(G, end_lon,   end_lat)
@@ -264,7 +310,9 @@ def run():
 
     jid = _new_job()
 
-    if algo == 'dijkstra':
+    if algo == 'weighted_astar':
+        target = (_run_weighted_astar, (jid, weights, start_node, end_node))
+    elif algo == 'dijkstra':
         target = (_run_dijkstra, (jid, elevation, start_node, end_node))
     elif algo == 'astar_manhattan':
         target = (_run_astar, (jid, 'manhattan', elevation, start_node, end_node))
@@ -307,5 +355,5 @@ def result(jid):
 
 if __name__ == '__main__':
     print("Urban Mobility API  →  http://localhost:5000")
-    print("Open GUI/lab.html in your browser to start.")
+    print("Open http://localhost:5000 in your browser to start.")
     app.run(host='localhost', port=5000, debug=False, threaded=True)

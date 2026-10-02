@@ -1,0 +1,58 @@
+
+============================================================
+[2026-05-12 10:42:57] Executing Algorithm for nsga2
+============================================================
+Elevation is set to ON
+Elevation is set to ON
+inicialización del perfil de usuario:
+tipo de ruta: drive
+lugar: ZMG
+coordenadas de inicio: x=-103.376624, y=20.630163
+coordenadas de destino: x=-103.384384, y=20.697814
+pesos: w_time=0.00  w_elev=1.00  w_veg=0.50
+Downloading graph for ZMG (2 municipios) using OSMX
+Adding 'ele_diff' in edges — running elevation...
+Adding Elevations to Graph of ZMG using OSMX
+Saving shape files
+> Elevation is activated
+[2026-05-12 10:44:08] elevation.run: 37.98s
+Adding 'indice_veg' in edges — running vegetation...
+Descargando areas verdes de ['Guadalajara, Jalisco, Mexico', 'San Pedro Tlaquepaque, Jalisco, Mexico']
+  leisure: 1301 elementos encontrados
+  landuse: 238 elementos encontrados
+  natural: 145 elementos encontrados
+  Árboles individuales: 559 encontrados
+
+Total de elementos de vegetación: 2243
+  Calculando índice de vegetación para 87908 aristas (Sequential)...
+[2026-05-12 10:46:07] vegetation.run: 119.08s
+Number of nodes: 37238
+Number of edges: 87908
+Start Node: 1358280144
+Destination Node: 1377171313
+[NSGA-II] Seeding population (4 individuals)...
+[NSGA-II] Population ready: 4 paths
+[NSGA-II] Gen   1/150  |  Pareto front: 7 solutions
+[NSGA-II] Gen  11/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  21/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  31/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  41/150  |  Pareto front: 3 solutions
+[NSGA-II] Gen  51/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  61/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  71/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  81/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  91/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 101/150  |  Pareto front: 7 solutions
+[NSGA-II] Gen 111/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 121/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 131/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 141/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 150/150  |  Pareto front: 8 solutions
+[NSGA-II] Done. 4 non-dominated solutions.
+
+── Pareto Front ──────────────────────────────────
+    #      Time (s)   Elev gain (m)    Veg cost   Nodes
+    0        6284.4           56.54      0.7762     137
+    1        6334.7           52.91      0.7762     137
+    2        9436.4           75.55      0.4050     112
+    3        9436.4           75.55      0.4050     112

@@ -1,0 +1,70 @@
+(base) cv4497@cv4497-desktop:~/git/UrbanMobilityAgent/src$ python main.py
+
+============================================================
+[2026-05-12 11:17:28] Executing Algorithm for nsga2
+============================================================
+Elevation is set to ON
+Elevation is set to ON
+inicialización del perfil de usuario:
+tipo de ruta: drive
+lugar: ZMG
+coordenadas de inicio: x=-103.376624, y=20.630163
+coordenadas de destino: x=-103.384384, y=20.697814
+pesos: w_time=0.00  w_elev=1.00  w_veg=0.50
+Downloading graph for ZMG (6 municipios) using OSMX
+Adding 'ele_diff' in edges — running elevation...
+Adding Elevations to Graph of ZMG using OSMX
+/home/cv4497/git/UrbanMobilityAgent/src/urban_mobility.py:348: UserWarning: Column names longer than 10 characters will be truncated when saved to ESRI Shapefile.
+  nodes.to_file(workspace.get_qgis_gdl_nodes_path())
+/home/cv4497/miniconda3/lib/python3.13/site-packages/pyogrio/raw.py:733: RuntimeWarning: Normalized/laundered field name: 'street_count' to 'street_cou'
+  ogr_write(
+/home/cv4497/miniconda3/lib/python3.13/site-packages/pyogrio/raw.py:733: RuntimeWarning: Value '[1135990924, 1135990929, 1417643156, 1417643157, 1135990934, 1290072087, 1290072089, 1290072090, 1135990907, 1135990868, 1135990875, 1386358748, 1135990876, 1386358749, 1135990881, 1249584354, 1135990883, 1249584356, 1135990885, 1249584358, 1249584359, 1249584360, 1249584361, 1249584362, 1249584363, 1249584357, 1135990900, 1135990903, 1392865274, 1392865275]' of field osmid has been truncated to 254 characters.  This warning will not be emitted any more for that layer.
+  ogr_write(
+Saving shape files
+> Elevation is activated
+[2026-05-12 11:21:17] elevation.run: 117.90s
+Adding 'indice_veg' in edges — running vegetation...
+Descargando areas verdes de ['Guadalajara, Jalisco, Mexico', 'Zapopan, Jalisco, Mexico', 'San Pedro Tlaquepaque, Jalisco, Mexico', 'Tonalá, Jalisco, Mexico', 'Tlajomulco de Zúñiga, Jalisco, Mexico', 'El Salto, Jalisco, Mexico']
+  leisure: 2912 elementos encontrados
+  landuse: 1272 elementos encontrados
+  natural: 321 elementos encontrados
+  Árboles individuales: 2510 encontrados
+
+Total de elementos de vegetación: 7015
+  Calculando índice de vegetación para 283446 aristas (Sequential)...
+Vegetación Secuencial: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 283446/283446 [04:14<00:00, 1112.36it/s]
+/home/cv4497/git/UrbanMobilityAgent/src/urban_mobility.py:348: UserWarning: Column names longer than 10 characters will be truncated when saved to ESRI Shapefile.
+  nodes.to_file(workspace.get_qgis_gdl_nodes_path())
+/home/cv4497/miniconda3/lib/python3.13/site-packages/pyogrio/raw.py:733: RuntimeWarning: Normalized/laundered field name: 'street_count' to 'street_cou'
+  ogr_write(
+/home/cv4497/miniconda3/lib/python3.13/site-packages/pyogrio/raw.py:733: RuntimeWarning: Value '[1135990924, 1135990929, 1417643156, 1417643157, 1135990934, 1290072087, 1290072089, 1290072090, 1135990907, 1135990868, 1135990875, 1386358748, 1135990876, 1386358749, 1135990881, 1249584354, 1135990883, 1249584356, 1135990885, 1249584358, 1249584359, 1249584360, 1249584361, 1249584362, 1249584363, 1249584357, 1135990900, 1135990903, 1392865274, 1392865275]' of field osmid has been truncated to 254 characters.  This warning will not be emitted any more for that layer.
+  ogr_write(
+[2026-05-12 11:27:33] vegetation.run: 376.31s
+Number of nodes: 117233
+Number of edges: 283446
+Start Node: 1358280144
+Destination Node: 1377171313
+[NSGA-II] Seeding population (4 individuals)...
+[NSGA-II] Population ready: 4 paths
+[NSGA-II] Gen   1/150  |  Pareto front: 6 solutions
+[NSGA-II] Gen  11/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  21/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  31/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  41/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  51/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  61/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  71/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  81/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  91/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 101/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 111/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 121/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 131/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 141/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 150/150  |  Pareto front: 8 solutions
+[NSGA-II] Done. 4 non-dominated solutions.
+
+── Pareto Front ──────────────────────────────────
+    #      Time (s)   Elev gain (m)    Veg cost   Nodes
+    0        8589.8           54.95      0.9318      83
+    1        8589.8           54.95      0.9318      83

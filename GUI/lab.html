@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Urban Mobility Lab</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --page:        #f9f9f7;
+  --surface:     #fcfcfb;
+  --surface-2:   #f0efec;
+  --ink:         #0b0b0b;
+  --ink-2:       #52514e;
+  --muted:       #898781;
+  --grid:        #e1e0d9;
+  --axis:        #c3c2b7;
+  --border:      rgba(11,11,11,0.10);
+  --accent:      #2a78d6;
+  --accent-ink:  #ffffff;
+  --series-1:    #2a78d6;   /* NSGA-II / single route */
+  --series-2:    #1baf7a;   /* NSGA-III (slot 3: orange is taken by the insecurity layer) */
+  --critical:    #d03b3b;
+  --good:        #006300;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:      #0d0d0d;
+    --surface:   #1a1a19;
+    --surface-2: #262624;
+    --ink:       #ffffff;
+    --ink-2:     #c3c2b7;
+    --grid:      #2c2c2a;
+    --axis:      #383835;
+    --border:    rgba(255,255,255,0.10);
+    --accent:    #3987e5;
+    --series-1:  #3987e5;
+    --series-2:  #199e70;
+    --good:      #0ca30c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:      #0d0d0d;
+  --surface:   #1a1a19;
+  --surface-2: #262624;
+  --ink:       #ffffff;
+  --ink-2:     #c3c2b7;
+  --grid:      #2c2c2a;
+  --axis:      #383835;
+  --border:    rgba(255,255,255,0.10);
+  --accent:    #3987e5;
+  --series-1:  #3987e5;
+  --series-2:  #199e70;
+  --good:      #0ca30c;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  overflow: hidden;
+}
+#panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+#map { height: 100%; background: var(--surface-2); }
+
+header { padding: 16px 16px 8px; }
+header h1 { font-size: 17px; margin: 0; font-weight: 650; }
+header p { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; }
+
+section { padding: 12px 16px; border-top: 1px solid var(--border); }
+section > h2 {
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .04em; margin: 0 0 8px;
+}
+label { display: block; color: var(--ink-2); font-size: 13px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row + .row { margin-top: 8px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+select, input[type=number] {
+  width: 100%; padding: 6px 8px; font: inherit; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--axis); border-radius: 6px;
+}
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.slider { display: grid; grid-template-columns: 70px 1fr 36px; gap: 8px; align-items: center; }
+.slider + .slider { margin-top: 4px; }
+.slider output { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+.hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+.seg { display: flex; border: 1px solid var(--axis); border-radius: 6px; overflow: hidden; }
+.seg button {
+  flex: 1; border: 0; background: transparent; color: var(--ink-2); font: inherit;
+  padding: 6px 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; justify-content: center;
+}
+.seg button + button { border-left: 1px solid var(--axis); }
+.seg button[aria-pressed=true] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+.pin-dot { width: 18px; height: 18px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700;
+  display: inline-grid; place-items: center; }
+.pin-a { background: #0b0b0b; }
+.pin-b { background: var(--critical); }
+.coords { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 6px; }
+
+#runBtn {
+  width: 100%; padding: 10px; border: 0; border-radius: 8px; font: inherit; font-weight: 600;
+  background: var(--accent); color: var(--accent-ink); cursor: pointer;
+}
+#runBtn:disabled { opacity: .55; cursor: progress; }
+#status { margin-top: 8px; font-size: 13px; color: var(--ink-2); min-height: 18px; }
+#status.error { color: var(--critical); }
+details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; margin-top: 6px; }
+#log {
+  max-height: 160px; overflow: auto; margin: 6px 0 0; padding: 8px; border-radius: 6px;
+  background: var(--surface-2); color: var(--ink-2); font: 11px/1.45 ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+#results:empty::before { content: "Run an algorithm to see routes here."; color: var(--muted); font-size: 13px; }
+.summary { color: var(--ink-2); font-size: 13px; margin-bottom: 8px; }
+.cards { display: flex; flex-direction: column; gap: 6px; }
+.card {
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer;
+  background: var(--surface); text-align: left; font: inherit; color: inherit; width: 100%;
+}
+.card:hover { background: var(--surface-2); }
+.card[aria-selected=true] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.card-head { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 8px; margin-top: 4px;
+  font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.metrics b { color: var(--ink); font-weight: 600; }
+
+#chartWrap { position: relative; margin-bottom: 10px; }
+#chart { width: 100%; height: auto; display: block; }
+#chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+#chart .axis-title { fill: var(--ink-2); font-size: 11px; }
+.legend { display: flex; gap: 12px; font-size: 12px; color: var(--ink-2); margin: 4px 0; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+#tip {
+  position: absolute; pointer-events: none; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; display: none; z-index: 5;
+  font-variant-numeric: tabular-nums;
+}
+#tip .t-sub { color: var(--ink-2); }
+
+.banner { margin: 0 16px 8px; padding: 8px 10px; border-radius: 6px; font-size: 13px;
+  background: var(--surface-2); color: var(--critical); }
+
+.leaflet-container { font: inherit; }
+.map-legend {
+  background: var(--surface); color: var(--ink); padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--border); font-size: 12px; min-width: 170px;
+}
+.map-legend .bar { height: 10px; border-radius: 3px; margin: 6px 0 2px; }
+.map-legend .scale { display: flex; justify-content: space-between; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pin { width: 26px; height: 26px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.pin span { transform: rotate(45deg); color: #fff; font: 700 12px system-ui, sans-serif; }
+
+@media (max-width: 760px) {
+  body { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; overflow: auto; height: auto; }
+  #map { grid-row: 1; height: 50vh; }
+  #panel { grid-row: 2; border-right: 0; overflow: visible; }
+}
+</style>
+</head>
+<body>
+<aside id="panel">
+  <header>
+    <h1>Urban Mobility Lab</h1>
+    <p>Multi-objective routes · Guadalajara Metropolitan Area</p>
+  </header>
+  <div id="graphBanner" class="banner" hidden>Graph file not found. Run <code>main.py</code> first.</div>
+
+  <section>
+    <h2>Origin &amp; destination</h2>
+    <div class="seg" role="group" aria-label="Map click sets">
+      <button id="setStart" aria-pressed="true"><span class="pin-dot pin-a">A</span>Set origin</button>
+      <button id="setEnd" aria-pressed="false"><span class="pin-dot pin-b">B</span>Set destination</button>
+    </div>
+    <div class="coords" id="coords"></div>
+    <div class="hint">Click the map or drag the pins.</div>
+  </section>
+
+  <section>
+    <h2>Algorithm</h2>
+    <select id="algo">
+      <option value="weighted_astar">Weighted A* (custom weights)</option>
+      <option value="nsga2">NSGA-II (Pareto front)</option>
+      <option value="nsga3">NSGA-III (Pareto front)</option>
+      <option value="compare">Compare NSGA-II vs NSGA-III</option>
+      <option value="dijkstra">Dijkstra</option>
+      <option value="astar_manhattan">A* Manhattan</option>
+      <option value="astar_euclidean">A* Euclidean</option>
+    </select>
+
+    <div id="weightsBox" style="margin-top:10px">
+      <div class="slider"><label for="w_time">Time</label><input id="w_time" type="range" min="0" max="1" step="0.05" value="0.5"><output for="w_time"></output></div>
+      <div class="slider"><label for="w_elev">Elevation</label><input id="w_elev" type="range" min="0" max="1" step="0.05" value="0"><output for="w_elev"></output></div>
+      <div class="slider"><label for="w_veg">Vegetation</label><input id="w_veg" type="range" min="0" max="1" step="0.05" value="0"><output for="w_veg"></output></div>
+      <div class="slider"><label for="w_sec">Insecurity</label><input id="w_sec" type="range" min="0" max="1" step="0.05" value="0.5"><output for="w_sec"></output></div>
+      <div class="hint">How much importance each objective gets. 0 ignores it.</div>
+    </div>
+
+    <div id="nsgaBox" class="grid2" style="margin-top:10px" hidden>
+      <label>Population<input id="pop_size" type="number" min="10" value="60"></label>
+      <label>Generations<input id="generations" type="number" min="5" value="20"></label>
+      <label>Mutation rate<input id="mutation_rate" type="number" min="0" max="1" step="0.05" value="0.15"></label>
+      <label id="divisionsLbl">Divisions<input id="divisions" type="number" min="2" value="12"></label>
+    </div>
+
+    <div id="elevBox" class="row" style="margin-top:10px" hidden>
+      <input id="elevation" type="checkbox" checked><label for="elevation">Use elevation weight</label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Time of day</h2>
+    <div class="slider"><label for="hour">Hour</label><input id="hour" type="range" min="0" max="23" step="1"><output id="hourOut"></output></div>
+    <div class="row" style="margin-top:6px">
+      <input id="showInsec" type="checkbox" checked><label for="showInsec">Show insecurity layer</label>
+    </div>
+    <div class="hint">The hour sets the insecurity value of each street (crime varies a lot by hour).</div>
+  </section>
+
+  <section>
+    <button id="runBtn">Run</button>
+    <div id="status" role="status"></div>
+    <details id="logBox"><summary>Log</summary><pre id="log"></pre></details>
+  </section>
+
+  <section>
+    <h2>Routes</h2>
+    <div id="chartBox" hidden>
+      <div class="row" style="margin-bottom:6px">
+        <label for="yMetric" style="flex:none">Compare time vs</label>
+        <select id="yMetric">
+          <option value="insecurity">Insecurity</option>
+          <option value="elev_gain_m">Elevation gain</option>
+          <option value="veg_cost">Lack of vegetation</option>
+          <option value="length_m">Distance</option>
+        </select>
+      </div>
+      <div class="legend" id="chartLegend"></div>
+      <div id="chartWrap"><svg id="chart" role="img" aria-label="Pareto front"></svg><div id="tip"></div></div>
+    </div>
+    <div id="results"></div>
+  </section>
+</aside>
+
+<div id="map"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+// ── metrics shown for every route ────────────────────────────────────────────
+const METRICS = {
+  time:        { label: "Time",               unit: "min", get: r => r.time_s / 60,      fmt: v => v.toFixed(1) },
+  length_m:    { label: "Distance",           unit: "km",  get: r => r.length_m / 1000,  fmt: v => v.toFixed(2) },
+  insecurity:  { label: "Insecurity",         unit: "SI",  get: r => r.insecurity * 100, fmt: v => v.toFixed(0) },
+  elev_gain_m: { label: "Elevation gain",     unit: "m",   get: r => r.elev_gain_m,      fmt: v => v.toFixed(1) },
+  veg_cost:    { label: "Lack of vegetation", unit: "%",   get: r => r.veg_cost * 100,   fmt: v => v.toFixed(0) },
+};
+
+// sequential ramp (one hue, light -> dark) for the insecurity layer
+const INSEC_RAMP = ["#fde7dc", "#fac5ab", "#f59f78", "#eb6834", "#c4501f", "#993c14", "#6b290c"];
+function rampColor(v) {          // v in [0, 100]
+  const t = Math.max(0, Math.min(1, v / 100)) * (INSEC_RAMP.length - 1);
+  const i = Math.min(Math.floor(t), INSEC_RAMP.length - 2), f = t - i;
+  const a = hex(INSEC_RAMP[i]), b = hex(INSEC_RAMP[i + 1]);
+  return `rgb(${a.map((c, k) => Math.round(c + (b[k] - c) * f)).join(",")})`;
+}
+function hex(h) { return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); }
+
+// ── map ──────────────────────────────────────────────────────────────────────
+const map = L.map("map", { preferCanvas: true, zoomControl: true }).setView([20.66, -103.38], 12);
+// Esri gray canvas basemap: no API key needed (tile.openstreetmap.org blocks apps under its usage policy).
+// Base below the insecurity layer, street/place labels above it but below the routes.
+map.createPane("insec");   map.getPane("insec").style.zIndex = 350;
+map.createPane("labels");  map.getPane("labels").style.zIndex = 380;
+map.getPane("labels").style.pointerEvents = "none";
+const isDark = () => document.documentElement.dataset.theme === "dark" ||
+  (document.documentElement.dataset.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+const canvas = isDark() ? "Dark_Gray" : "Light_Gray";
+const esri = (layer, pane) => L.tileLayer(
+  `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${canvas}_${layer}/MapServer/tile/{z}/{y}/{x}`,
+  { maxZoom: 19, maxNativeZoom: 16, pane,
+    attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Esri, HERE, Garmin, &copy; OpenStreetMap contributors' });
+esri("Base", "tilePane").addTo(map);
+esri("Reference", "labels").addTo(map);
+const insecRenderer = L.canvas({ pane: "insec" });
+const routeLayer = L.layerGroup().addTo(map);
+let insecLayer = null;
+
+function pinIcon(letter, color) {
+  return L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 26],
+    html: `<div class="pin" style="background:${color}"><span>${letter}</span></div>` });
+}
+const state = {
+  start: L.latLng(20.630163, -103.376624),
+  end:   L.latLng(20.697814, -103.384384),
+  target: "start",
+  items: [],          // routes currently shown: {key, series, color, route}
+  selected: null,
+};
+const startMarker = L.marker(state.start, { draggable: true, icon: pinIcon("A", "#0b0b0b"), zIndexOffset: 1000 }).addTo(map);
+const endMarker   = L.marker(state.end,   { draggable: true, icon: pinIcon("B", css("--critical")), zIndexOffset: 1000 }).addTo(map);
+startMarker.on("dragend", () => { state.start = startMarker.getLatLng(); showCoords(); });
+endMarker.on("dragend",   () => { state.end   = endMarker.getLatLng();   showCoords(); });
+
+function setTarget(t) {
+  state.target = t;
+  $("setStart").setAttribute("aria-pressed", t === "start");
+  $("setEnd").setAttribute("aria-pressed", t === "end");
+}
+$("setStart").onclick = () => setTarget("start");
+$("setEnd").onclick   = () => setTarget("end");
+map.on("click", e => {
+  if (state.target === "start") { state.start = e.latlng; startMarker.setLatLng(e.latlng); setTarget("end"); }
+  else                          { state.end   = e.latlng; endMarker.setLatLng(e.latlng);   setTarget("start"); }
+  showCoords();
+});
+function showCoords() {
+  const f = p => `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+  $("coords").textContent = `A ${f(state.start)}   ·   B ${f(state.end)}`;
+}
+
+// ── controls ─────────────────────────────────────────────────────────────────
+for (const id of ["w_time", "w_elev", "w_veg", "w_sec"]) {
+  const out = document.querySelector(`output[for=${id}]`);
+  const sync = () => out.textContent = (+$(id).value).toFixed(2);
+  $(id).addEventListener("input", sync); sync();
+}
+function syncAlgo() {
+  const a = $("algo").value;
+  $("weightsBox").hidden = a !== "weighted_astar";
+  $("nsgaBox").hidden = !["nsga2", "nsga3", "compare"].includes(a);
+  $("divisionsLbl").hidden = a === "nsga2";
+  $("elevBox").hidden = !["dijkstra", "astar_manhattan", "astar_euclidean"].includes(a);
+}
+$("algo").addEventListener("change", syncAlgo);
+
+$("hour").value = new Date().getHours();
+const hourLabel = h => `${String(h).padStart(2, "0")}:00`;
+let hourTimer;
+$("hour").addEventListener("input", () => {
+  $("hourOut").textContent = hourLabel($("hour").value);
+  clearTimeout(hourTimer);
+  hourTimer = setTimeout(loadInsecurity, 250);
+});
+$("hourOut").textContent = hourLabel($("hour").value);
+$("showInsec").addEventListener("change", loadInsecurity);
+
+// ── insecurity layer ─────────────────────────────────────────────────────────
+const legend = L.control({ position: "bottomright" });
+legend.onAdd = () => L.DomUtil.create("div", "map-legend");
+legend.addTo(map);
+let insecRequest = 0;
+
+async function loadInsecurity() {
+  const req = ++insecRequest;
+  const hour = +$("hour").value;
+  if (insecLayer) { map.removeLayer(insecLayer); insecLayer = null; }
+  const box = legend.getContainer();
+  if (!$("showInsec").checked) { box.style.display = "none"; return; }
+  box.style.display = "";
+  box.innerHTML = `<b>Insecurity at ${hourLabel(hour)}</b><div class="scale" style="margin-top:4px">Loading…</div>`;
+  try {
+    const res = await fetch(`/api/insecurity?hour=${hour}`);
+    const g = await res.json();
+    if (req !== insecRequest) return;        // a newer hour was requested meanwhile
+    insecLayer = L.layerGroup(g.cells.map(([lat, lon, si]) =>
+      L.rectangle([[lat, lon], [lat + g.dlat, lon + g.dlon]], {
+        renderer: insecRenderer, stroke: false, fillColor: rampColor(si), fillOpacity: 0.12 + 0.5 * Math.min(si, 100) / 100, interactive: true,
+      }).bindTooltip(`SI ${si.toFixed(0)} at ${hourLabel(hour)}`, { sticky: true })
+    )).addTo(map);
+    const mean = g.cells.reduce((s, c) => s + c[2], 0) / g.cells.length;
+    box.innerHTML = `<b>Insecurity at ${hourLabel(hour)}</b>
+      <div class="bar" style="background:linear-gradient(90deg,${INSEC_RAMP.join(",")})"></div>
+      <div class="scale"><span>0 safe</span><span>100</span></div>
+      <div style="color:var(--ink-2);margin-top:4px">City mean SI ${mean.toFixed(1)} · 500 m cells</div>`;
+  } catch (e) {
+    box.innerHTML = `<b>Insecurity</b><div style="color:var(--critical)">Could not load: ${e.message}</div>`;
+  }
+}
+
+// ── run & poll ───────────────────────────────────────────────────────────────
+function setStatus(msg, error = false) { $("status").textContent = msg; $("status").classList.toggle("error", error); }
+
+$("runBtn").onclick = async () => {
+  const algo = $("algo").value;
+  const params = {
+    pop_size: +$("pop_size").value, generations: +$("generations").value,
+    mutation_rate: +$("mutation_rate").value, divisions: +$("divisions").value,
+    w_time: +$("w_time").value, w_elev: +$("w_elev").value, w_veg: +$("w_veg").value, w_sec: +$("w_sec").value,
+  };
+  const body = {
+    algorithm: algo, params, elevation: $("elevation").checked, hour: +$("hour").value,
+    start_lat: state.start.lat, start_lon: state.start.lng, end_lat: state.end.lat, end_lon: state.end.lng,
+  };
+  $("runBtn").disabled = true;
+  $("log").textContent = "";
+  const t0 = performance.now();
+  const tick = setInterval(() => setStatus(`Running… ${((performance.now() - t0) / 1000).toFixed(0)} s`), 500);
+  setStatus("Starting…");
+  try {
+    const res = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const job = await res.json();
+    if (!res.ok) throw new Error(job.error || res.statusText);
+    while (true) {
+      await new Promise(r => setTimeout(r, 1000));
+      const st = await (await fetch(`/api/status/${job.job_id}`)).json();
+      const log = $("log");
+      log.textContent = st.log.slice(-300).join("\n");
+      log.scrollTop = log.scrollHeight;
+      if (st.status === "running") continue;
+      const r = await fetch(`/api/result/${job.job_id}`);
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Job failed");
+      showResult(data, algo);
+      setStatus(`Done in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+      break;
+    }
+  } catch (e) {
+    setStatus(e.message, true);
+    $("logBox").open = true;
+  } finally {
+    clearInterval(tick);
+    $("runBtn").disabled = false;
+  }
+};
+
+// ── results ──────────────────────────────────────────────────────────────────
+function showResult(data) {
+  const items = [];
+  const add = (series, color, routes) => routes
+    .slice().sort((a, b) => a.time_s - b.time_s)
+    .forEach((route, i) => items.push({ key: `${series}-${i}`, series, color, route, n: i + 1 }));
+
+  let summary = "";
+  if (data.type === "single") {
+    add(data.algorithm, "--series-1", [data.route]);
+  } else if (data.type === "pareto") {
+    add(data.algorithm, "--series-1", data.solutions);
+    summary = `${data.solutions.length} non-dominated routes · computed in ${data.compute_time_s} s`;
+  } else if (data.type === "compare") {
+    add("NSGA-II", "--series-1", data.nsga2.solutions);
+    add("NSGA-III", "--series-2", data.nsga3.solutions);
+    summary = `NSGA-II: ${data.nsga2.solutions.length} routes in ${data.nsga2.compute_time_s} s · ` +
+              `NSGA-III: ${data.nsga3.solutions.length} routes in ${data.nsga3.compute_time_s} s`;
+  }
+  state.items = items;
+  state.selected = items.length ? items[0].key : null;
+
+  // cards (they double as the table view of the chart)
+  $("results").innerHTML = (summary ? `<div class="summary">${summary}</div>` : "") +
+    `<div class="cards">${items.map(it => {
+      const r = it.route, m = k => METRICS[k].fmt(METRICS[k].get(r));
+      const name = items.length > 1 ? `${it.series} · route ${it.n}` : it.series;
+      return `<button class="card" data-key="${it.key}">
+        <div class="card-head"><span class="swatch" style="background:var(${it.color})"></span>${name}</div>
+        <div class="metrics">
+          <span><b>${m("time")}</b> min</span><span><b>${m("length_m")}</b> km</span><span>SI <b>${m("insecurity")}</b></span>
+          <span><b>${m("elev_gain_m")}</b> m ↑</span><span><b>${m("veg_cost")}%</b> no veg.</span><span>${r.nodes} nodes</span>
+        </div></button>`;
+    }).join("")}</div>`;
+  document.querySelectorAll(".card").forEach(c => c.onclick = () => select(c.dataset.key, true));
+
+  drawRoutes();
+  const all = items.flatMap(it => it.route.coords);
+  if (all.length) map.fitBounds(L.latLngBounds(all), { padding: [40, 40] });
+
+  $("chartBox").hidden = items.length < 2;
+  const series = [...new Set(items.map(it => it.series))];
+  $("chartLegend").innerHTML = series.map(s => {
+    const c = items.find(it => it.series === s).color;
+    return `<span><span class="swatch" style="background:var(${c})"></span>${s}</span>`;
+  }).join("");
+  drawChart();
+  select(state.selected);
+}
+
+function drawRoutes() {
+  routeLayer.clearLayers();
+  const surface = css("--surface");
+  // unselected routes first (thin, translucent), then the selected one on top with a casing
+  const ordered = state.items.slice().sort((a, b) => (a.key === state.selected) - (b.key === state.selected));
+  for (const it of ordered) {
+    const sel = it.key === state.selected;
+    const color = css(it.color);
+    if (sel) L.polyline(it.route.coords, { color: surface, weight: 9, opacity: 0.9, interactive: false }).addTo(routeLayer);
+    L.polyline(it.route.coords, { color, weight: sel ? 5 : 3, opacity: sel ? 1 : 0.4 })
+      .on("click", e => { L.DomEvent.stopPropagation(e); select(it.key, true); })
+      .addTo(routeLayer);
+  }
+}
+
+function select(key, scroll = false) {
+  state.selected = key;
+  document.querySelectorAll(".card").forEach(c => {
+    const on = c.dataset.key === key;
+    c.setAttribute("aria-selected", on);
+    if (on && scroll) c.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
+  drawRoutes();
+  drawChart();
+}
+
+// ── Pareto chart: time (x) vs a chosen objective (y) ─────────────────────────
+$("yMetric").addEventListener("change", drawChart);
+
+function niceTicks(lo, hi, n = 4) {
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const raw = (hi - lo) / n, mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => s >= raw);
+  const t = [];
+  for (let v = Math.floor(lo / step) * step; v <= hi + step * 1e-9; v += step) t.push(+v.toFixed(10));
+  if (t[t.length - 1] < hi) t.push(t[t.length - 1] + step);
+  return t;
+}
+
+function drawChart() {
+  const svg = $("chart");
+  if (state.items.length < 2) { svg.innerHTML = ""; return; }
+  const W = 340, H = 232, m = { l: 44, r: 12, t: 24, b: 36 };
+  const X = METRICS.time, Y = METRICS[$("yMetric").value];
+  const pts = state.items.map(it => ({ it, x: X.get(it.route), y: Y.get(it.route) }));
+  const xt = niceTicks(Math.min(...pts.map(p => p.x)), Math.max(...pts.map(p => p.x)));
+  const yt = niceTicks(Math.min(...pts.map(p => p.y)), Math.max(...pts.map(p => p.y)));
+  const sx = v => m.l + (v - xt[0]) / (xt.at(-1) - xt[0]) * (W - m.l - m.r);
+  const sy = v => H - m.b - (v - yt[0]) / (yt.at(-1) - yt[0]) * (H - m.t - m.b);
+  const grid = css("--grid"), axis = css("--axis"), surface = css("--surface"), ink = css("--ink");
+
+  let s = "";
+  for (const v of yt) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(v)}" y2="${sy(v)}" stroke="${grid}"/>
+    <text x="${m.l - 6}" y="${sy(v) + 4}" text-anchor="end">${+v.toFixed(2)}</text>`;
+  for (const v of xt) s += `<text x="${sx(v)}" y="${H - m.b + 15}" text-anchor="middle">${+v.toFixed(2)}</text>`;
+  s += `<line x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="${axis}"/>`;
+  s += `<text class="axis-title" x="${(m.l + W - m.r) / 2}" y="${H - 4}" text-anchor="middle">${X.label} (${X.unit}) →</text>`;
+  s += `<text class="axis-title" x="${m.l}" y="12" text-anchor="start">${Y.label} (${Y.unit})</text>`;
+  // selected point last so it sits on top
+  const order = pts.slice().sort((a, b) => (a.it.key === state.selected) - (b.it.key === state.selected));
+  for (const p of order) {
+    const sel = p.it.key === state.selected;
+    s += `<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="${sel ? 7 : 5}" fill="${css(p.it.color)}"
+      stroke="${sel ? ink : surface}" stroke-width="2" style="pointer-events:none"/>`;
+    s += `<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="12" fill="transparent" data-key="${p.it.key}" style="cursor:pointer"/>`;
+  }
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = s;
+
+  const tip = $("tip"), wrap = $("chartWrap");
+  svg.querySelectorAll("circle[data-key]").forEach(c => {
+    const p = pts.find(q => q.it.key === c.dataset.key);
+    c.onmouseenter = () => {
+      tip.innerHTML = `<b>${p.it.series} · route ${p.it.n}</b><br>
+        <span class="t-sub">${X.label}</span> ${X.fmt(p.x)} ${X.unit}<br>
+        <span class="t-sub">${Y.label}</span> ${Y.fmt(p.y)} ${Y.unit === "%" ? "" : Y.unit}`;
+      tip.style.display = "block";
+      const box = wrap.getBoundingClientRect(), cb = c.getBoundingClientRect();
+      const left = cb.left - box.left + cb.width / 2, top = cb.top - box.top;
+      tip.style.left = Math.min(Math.max(left - tip.offsetWidth / 2, 0), box.width - tip.offsetWidth) + "px";
+      tip.style.top = (top - tip.offsetHeight - 4 < 0 ? top + cb.height + 4 : top - tip.offsetHeight - 4) + "px";
+    };
+    c.onmouseleave = () => tip.style.display = "none";
+    c.onclick = () => select(c.dataset.key, true);
+  });
+}
+
+// ── init ─────────────────────────────────────────────────────────────────────
+syncAlgo();
+showCoords();
+loadInsecurity();
+fetch("/api/graph/status").then(r => r.json()).then(s => { $("graphBanner").hidden = s.exists; }).catch(() => {});
+</script>
+</body>
+</html>

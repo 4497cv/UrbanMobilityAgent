@@ -1,0 +1,27 @@
+
+============================================================
+[2026-05-12 11:17:28] Executing Algorithm for nsga2
+============================================================
+Elevation is set to ON
+Elevation is set to ON
+inicialización del perfil de usuario:
+tipo de ruta: drive
+lugar: ZMG
+coordenadas de inicio: x=-103.376624, y=20.630163
+coordenadas de destino: x=-103.384384, y=20.697814
+pesos: w_time=0.00  w_elev=1.00  w_veg=0.50
+Downloading graph for ZMG (6 municipios) using OSMX
+Adding 'ele_diff' in edges — running elevation...
+Adding Elevations to Graph of ZMG using OSMX
+Saving shape files
+> Elevation is activated
+[2026-05-12 11:21:17] elevation.run: 117.90s
+Adding 'indice_veg' in edges — running vegetation...
+Descargando areas verdes de ['Guadalajara, Jalisco, Mexico', 'Zapopan, Jalisco, Mexico', 'San Pedro Tlaquepaque, Jalisco, Mexico', 'Tonalá, Jalisco, Mexico', 'Tlajomulco de Zúñiga, Jalisco, Mexico', 'El Salto, Jalisco, Mexico']
+  leisure: 2912 elementos encontrados
+  landuse: 1272 elementos encontrados
+  natural: 321 elementos encontrados
+  Árboles individuales: 2510 encontrados
+
+Total de elementos de vegetación: 7015
+  Calculando índice de vegetación para 283446 aristas (Sequential)...

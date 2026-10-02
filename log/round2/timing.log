@@ -1,0 +1,160 @@
+
+============================================================
+[2026-05-12 11:32:20] Executing Algorithm for nsga2
+============================================================
+Elevation is set to ON
+Elevation is set to ON
+inicialización del perfil de usuario:
+tipo de ruta: drive
+lugar: ZMG
+coordenadas de inicio: x=-103.376624, y=20.630163
+coordenadas de destino: x=-103.384384, y=20.697814
+pesos: w_time=0.00  w_elev=1.00  w_veg=0.50
+Downloading graph for ZMG (6 municipios) using OSMX
+Adding 'ele_diff' in edges — running elevation...
+Adding Elevations to Graph of ZMG using OSMX
+Saving shape files
+> Elevation is activated
+[2026-05-12 11:36:05] elevation.run: 113.71s
+Adding 'indice_veg' in edges — running vegetation...
+Descargando areas verdes de ['Guadalajara, Jalisco, Mexico', 'Zapopan, Jalisco, Mexico', 'San Pedro Tlaquepaque, Jalisco, Mexico', 'Tonalá, Jalisco, Mexico', 'Tlajomulco de Zúñiga, Jalisco, Mexico', 'El Salto, Jalisco, Mexico']
+  leisure: 2912 elementos encontrados
+  landuse: 1272 elementos encontrados
+  natural: 321 elementos encontrados
+  Árboles individuales: 2510 encontrados
+
+Total de elementos de vegetación: 7015
+  Calculando índice de vegetación para 283446 aristas (Sequential)...
+[2026-05-12 11:42:19] vegetation.run: 373.61s
+Number of nodes: 117233
+Number of edges: 283446
+Start Node: 1358280144
+Destination Node: 1377171313
+[NSGA-II] Seeding population (4 individuals)...
+[NSGA-II] Population ready: 4 paths
+[NSGA-II] Gen   1/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  11/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  21/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  31/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  41/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  51/150  |  Pareto front: 7 solutions
+[NSGA-II] Gen  61/150  |  Pareto front: 7 solutions
+[NSGA-II] Gen  71/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  81/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  91/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 101/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 111/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 121/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 131/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 141/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 150/150  |  Pareto front: 8 solutions
+[NSGA-II] Done. 4 non-dominated solutions.
+
+── Pareto Front ──────────────────────────────────
+    #      Time (s)   Elev gain (m)    Veg cost   Nodes
+    0        6503.3           62.77      0.6279     129
+    1        6503.3           62.77      0.6279     129
+    2        9284.3           76.07      0.4133     110
+    3        9284.3           76.07      0.4133     110
+
+============================================================
+[2026-05-12 12:00:18] Executing Algorithm for nsga2
+============================================================
+Elevation is set to ON
+Elevation is set to ON
+inicialización del perfil de usuario:
+tipo de ruta: drive
+lugar: ZMG
+coordenadas de inicio: x=-103.376624, y=20.630163
+coordenadas de destino: x=-103.384384, y=20.697814
+pesos: w_time=0.00  w_elev=1.00  w_veg=0.50
+Reconstructing path from graphml file: /home/cv4497/git/UrbanMobilityAgent/QGIS/Graph/Guadalajara
+'ele_diff' OK
+'indice_veg' OK
+Number of nodes: 117233
+Number of edges: 283446
+Start Node: 1358280144
+Destination Node: 1377171313
+[NSGA-II] Seeding population (4 individuals)...
+[NSGA-II] Population ready: 4 paths
+[NSGA-II] Gen   1/150  |  Pareto front: 7 solutions
+[NSGA-II] Gen  11/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  21/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  31/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  41/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  51/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  61/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  71/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  81/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  91/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 101/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 111/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 121/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 131/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 141/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 150/150  |  Pareto front: 8 solutions
+[NSGA-II] Done. 4 non-dominated solutions.
+
+── Pareto Front ──────────────────────────────────
+    #      Time (s)   Elev gain (m)    Veg cost   Nodes
+    0        7741.0           65.24      0.5257     117
+    1        8855.8           51.31      0.8899      81
+    2        9682.1           80.02      0.3921     123
+
+============================================================
+[2026-05-12 12:02:21] Executing Algorithm for nsga2
+============================================================
+Elevation is set to ON
+Elevation is set to ON
+inicialización del perfil de usuario:
+tipo de ruta: drive
+lugar: ZMG
+coordenadas de inicio: x=-103.376624, y=20.630163
+coordenadas de destino: x=-103.384384, y=20.697814
+pesos: w_time=0.00  w_elev=1.00  w_veg=0.50
+Downloading graph for ZMG (6 municipios) using OSMX
+Adding 'ele_diff' in edges — running elevation...
+Adding Elevations to Graph of ZMG using OSMX
+Saving shape files
+> Elevation is activated
+[2026-05-12 12:06:11] elevation.run: 118.11s
+Adding 'indice_veg' in edges — running vegetation...
+Descargando areas verdes de ['Guadalajara, Jalisco, Mexico', 'Zapopan, Jalisco, Mexico', 'San Pedro Tlaquepaque, Jalisco, Mexico', 'Tonalá, Jalisco, Mexico', 'Tlajomulco de Zúñiga, Jalisco, Mexico', 'El Salto, Jalisco, Mexico']
+  leisure: 2912 elementos encontrados
+  landuse: 1272 elementos encontrados
+  natural: 321 elementos encontrados
+  Árboles individuales: 2510 encontrados
+
+Total de elementos de vegetación: 7015
+  Calculando índice de vegetación para 283446 aristas (Paralelo en CPU)...
+[2026-05-12 12:12:50] vegetation.run: 399.18s
+Number of nodes: 117233
+Number of edges: 283446
+Start Node: 1358280144
+Destination Node: 1377171313
+[NSGA-II] Seeding population (4 individuals)...
+[NSGA-II] Population ready: 4 paths
+[NSGA-II] Gen   1/150  |  Pareto front: 5 solutions
+[NSGA-II] Gen  11/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  21/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  31/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  41/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  51/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  61/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  71/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  81/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen  91/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 101/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 111/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 121/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 131/150  |  Pareto front: 8 solutions
+[NSGA-II] Gen 141/150  |  Pareto front: 7 solutions
+[NSGA-II] Gen 150/150  |  Pareto front: 8 solutions
+[NSGA-II] Done. 4 non-dominated solutions.
+
+── Pareto Front ──────────────────────────────────
+    #      Time (s)   Elev gain (m)    Veg cost   Nodes
+    0        7984.6           54.30      0.9361      91
+    1        8091.2           53.24      0.9333      91
+    2        9451.5           78.64      0.4050     112
+    3        9717.1           71.84      0.5219      96

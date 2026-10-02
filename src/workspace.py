@@ -117,8 +117,21 @@ def get_insecurity_path():
     path = os.path.join(get_workspace_path(), "src", "insecurity")
     return path
 
+def get_crime_population_csv_path():
+    return os.path.join(get_workspace_path(), "doc", "Crime_Population.csv")
+
+def get_insecurity_model_path():
+    cache_dir = os.path.join(get_workspace_path(), "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    return os.path.join(cache_dir, "insecurity_model.joblib")
+
 def get_areas_verdes_shp_path():
      veg_path = os.path.join(get_vegetation_shp_path(), "areas_verdes.shp")
      return veg_path
+
+def get_log_path():
+    log_dir = os.path.join(get_workspace_path(), "log")
+    os.makedirs(log_dir, exist_ok=True)
+    return os.path.join(log_dir, "timing.log")
 
 init_workspace_path()

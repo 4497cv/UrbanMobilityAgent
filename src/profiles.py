@@ -3,11 +3,11 @@ import sys
 
 ZMG_PLACES = [
     "Guadalajara, Jalisco, Mexico",
-    #"Zapopan, Jalisco, Mexico",
+    "Zapopan, Jalisco, Mexico",
     "San Pedro Tlaquepaque, Jalisco, Mexico",
-    #"Tonalá, Jalisco, Mexico",
-    #"Tlajomulco de Zúñiga, Jalisco, Mexico",
-    #"El Salto, Jalisco, Mexico",
+    "Tonalá, Jalisco, Mexico",
+    "Tlajomulco de Zúñiga, Jalisco, Mexico",
+    "El Salto, Jalisco, Mexico",
 ]
 
 network_types = {
@@ -35,7 +35,7 @@ class UserProfile:
     elevation_active = False
     vegetation_active = False
     insecurity_active = False
-    processing_mode = MODE_GPU
+    processing_mode = MODE_NORMAL
     ncpu_threads = 12
     start_coordinates = Coordinates(x=-103.376624, y=20.630163)
     end_coordinates   = Coordinates(x=-103.384384, y=20.697814)
@@ -43,17 +43,19 @@ class UserProfile:
     w_elev = 0
     w_veg = 0
     w_sec = 0
+    hour = None  # hora del viaje (0-23) para el indice de inseguridad; None = hora actual
 
     def __init__(self, network_type="drive", place="Guadalajara, Mexico",
                  start_coordinates_x=-103.376624, start_coordinates_y=20.630163,
                  end_coordinates_x=-103.384384, end_coordinates_y=20.697814,
-                 w_time=0.5, w_elev=0.0, w_veg=0.0, w_sec=0.5):
+                 w_time=0.5, w_elev=0.0, w_veg=0.0, w_sec=0.5, hour=None):
         self.network_type = network_type
         self.place = place
         self.w_time = w_time
         self.w_elev = w_elev
         self.w_veg  = w_veg
         self.w_sec = w_sec
+        self.hour = hour
 
         if self.network_type == "drive":
             self.elevation_active = True
@@ -75,6 +77,12 @@ class UserProfile:
             self.vegetation_active = False
         else:
             print("Elevation is set to ON")
+
+        if(w_sec == 0):
+            print("Insecurity is set to OFF")
+            self.insecurity_active = False
+        else:
+            print("Insecurity is set to ON")
 
         print("inicialización del perfil de usuario:")
         print("tipo de ruta: %s" % self.network_type)
@@ -114,7 +122,7 @@ class UserProfile:
         if((MODE_NORMAL == processing_mode) or
            (MODE_CPU    == processing_mode) or
            (MODE_GPU    == processing_mode)):
-            return self.processing_mode
+            self.processing_mode = processing_mode
         else:
             sys.exit("incorrect processing mode has been set %s" % processing_mode)
 
